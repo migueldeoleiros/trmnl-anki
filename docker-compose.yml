@@ -6,52 +6,71 @@ services:
       - path: .env
         required: false
     environment:
-      TRMNL_ANKI_ANKICONNECT_URL: http://anki:8765
+      TRMNL_ANKI_ANKICONNECT_URL: http://172.28.0.10:8765
+      TRMNL_ANKI_ANKICONNECT_API_KEY: ${ANKICONNECT_API_KEY:-}
       TRMNL_ANKI_CACHE_PATH: /data/cache/current-card.json
       TRMNL_ANKI_DECK_NAME: ${TRMNL_ANKI_DECK_NAME:-Core 2000}
       TRMNL_ANKI_CARD_QUERY: ${TRMNL_ANKI_CARD_QUERY:-rated:7 deck:"Core 2000"}
       TRMNL_ANKI_FALLBACK_QUERY: ${TRMNL_ANKI_FALLBACK_QUERY:-deck:"Core 2000"}
       TRMNL_ANKI_CADENCE_MINUTES: ${TRMNL_ANKI_CADENCE_MINUTES:-30}
       TRMNL_ANKI_SYNC_INTERVAL_SECONDS: ${TRMNL_ANKI_SYNC_INTERVAL_SECONDS:-3600}
+      TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS: ${TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS:-60}
       TRMNL_ANKI_BACKGROUND_SYNC_ENABLED: ${TRMNL_ANKI_BACKGROUND_SYNC_ENABLED:-true}
       TRMNL_ANKI_REFRESH_ON_STARTUP: ${TRMNL_ANKI_REFRESH_ON_STARTUP:-true}
       TRMNL_ANKI_EXPOSE_API_DOCS: ${TRMNL_ANKI_EXPOSE_API_DOCS:-false}
     volumes:
       - trmnl_anki_cache:/data/cache
     networks:
-      - public
+      - egress
       - internal
+      - public
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
       - anki
 
   anki:
-    image: ghcr.io/linuxserver/baseimage-kasmvnc:debianbookworm
+    build:
+      context: ./anki
+      args:
+        ANKI_LAUNCHER_URL: ${ANKI_LAUNCHER_URL:-https://apps.ankiweb.net/downloads/current/anki-launcher-linux.tar.zst}
+        ANKICONNECT_REF: ${ANKICONNECT_REF:-23.10.29.0}
     restart: unless-stopped
     shm_size: "1gb"
     environment:
       TZ: ${TZ:-UTC}
-      ANKIWEB_EMAIL: ${ANKIWEB_EMAIL:-}
-      ANKI_SYNC_INTERVAL_SECONDS: ${TRMNL_ANKI_SYNC_INTERVAL_SECONDS:-3600}
+      ANKI_BASE: /config/Anki2
+      ANKI_PROFILE: ${ANKI_PROFILE:-User 1}
+      ANKICONNECT_BIND_ADDRESS: 172.28.0.10
+      ANKICONNECT_BIND_PORT: 8765
+      ANKICONNECT_API_KEY: ${ANKICONNECT_API_KEY:-}
+      CUSTOM_USER: ${KASMVNC_USER:-admin}
+      PASSWORD: ${KASMVNC_PASSWORD:-}
+      TITLE: TRMNL Anki
     volumes:
       - anki_profile:/config
-      - ./scripts:/opt/trmnl-anki:ro
     networks:
-      - internal
+      egress:
+      internal:
+        ipv4_address: 172.28.0.10
     expose:
       - "8765"
       - "3000"
-    # Portainer note: publish noVNC/KasmVNC only behind admin-only auth.
-    # Example for first bootstrap on localhost only:
-    # ports:
-    #   - "127.0.0.1:3000:3000"
-    command: ["/opt/trmnl-anki/anki-bootstrap-placeholder.sh"]
-
+      - "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "payload=$$(jq -n --arg key \"$${ANKICONNECT_API_KEY:-}\" '{action:\"version\",version:6} + (if $$key == \"\" then {} else {key:$$key} end)'); curl -fsS -H 'Content-Type: application/json' -d \"$$payload\" http://172.28.0.10:8765 >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 networks:
   public:
+  egress:
   internal:
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 volumes:
   trmnl_anki_cache:

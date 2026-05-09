@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+/opt/trmnl-anki/start-anki.sh

@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import asyncio
+import logging
 
 from .ankiconnect import AnkiConnectClient
 from .cache import JsonCardCache, utc_now_iso
 from .config import Settings
 from .normalize import normalize_cards
 from .rotation import card_for_slot, slot_id_for
+
+
+logger = logging.getLogger(__name__)
 
 
 class CardService:
@@ -19,16 +23,24 @@ class CardService:
 
     async def refresh_from_anki(self, *, trigger_sync: bool = False) -> dict:
         async with self._refresh_lock:
+            sync_error: Exception | None = None
+            if trigger_sync:
+                try:
+                    await self.client.sync(timeout_seconds=self.settings.ankiconnect_sync_timeout_seconds)
+                except Exception as exc:
+                    sync_error = exc
+                    logger.warning("Anki sync failed; trying local card extraction anyway: %s", exc)
             try:
-                if trigger_sync:
-                    await self.client.sync()
                 card_ids = await self.client.find_cards(self.settings.card_query)
                 if len(card_ids) < self.settings.min_cards:
                     card_ids = await self.client.find_cards(self.settings.fallback_query)
                 card_ids = card_ids[: self.settings.max_cards]
                 raw_cards = await self.client.cards_info(card_ids)
                 cards, skipped = normalize_cards(raw_cards)
-                return self.cache.update_success(cards, included=len(cards), skipped=skipped)
+                result = self.cache.update_success(cards, included=len(cards), skipped=skipped)
+                if sync_error is not None:
+                    result = self.cache.mark_stale(f"sync failed before successful local extraction: {sync_error}")
+                return result
             except Exception as exc:
                 try:
                     return self.cache.update_failure(str(exc))
@@ -41,11 +53,14 @@ class CardService:
         cards = cache.get("cards") or []
         slot_id = slot_id_for(now, self.settings.cadence_minutes)
         card = card_for_slot(cards, slot_id)
+        sync_status = cache.get("last_sync_status")
         status = "ok" if card else "empty"
-        stale = cache.get("last_sync_status") != "ok"
+        if not card and sync_status not in ("never", None):
+            status = "error"
+        stale = sync_status not in ("ok", "never", None)
         return {
             "schema_version": cache.get("schema_version", 1),
-            "status": status if not stale or card else "error",
+            "status": status,
             "generated_at": utc_now_iso(),
             "last_sync_at": cache.get("last_sync_at"),
             "last_success_at": cache.get("last_success_at"),

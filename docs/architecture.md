@@ -2,6 +2,8 @@
 
 The backend polls AnkiConnect over the internal Docker network, normalizes cards, writes a JSON cache, and exposes only cached read-only data to TRMNL.
 
+The Anki container also joins an egress network so it can download/install AnkiConnect on first run and sync with AnkiWeb. AnkiConnect binds to the static internal address `172.28.0.10:8765`, so it remains unpublished and reachable only on the internal Docker network.
+
 ```text
 AnkiDroid
   -> AnkiWeb

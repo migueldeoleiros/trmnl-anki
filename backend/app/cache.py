@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -47,21 +49,28 @@ class JsonCardCache:
 
     def save(self, data: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = self.path.with_suffix(self.path.suffix + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as handle:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=self.path.parent,
+            prefix=f".{self.path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            tmp_path = Path(handle.name)
             json.dump(data, handle, ensure_ascii=False, indent=2, sort_keys=True)
-        tmp_path.replace(self.path)
+        os.replace(tmp_path, self.path)
 
     def update_success(self, cards: list[dict[str, Any]], *, included: int, skipped: int) -> dict[str, Any]:
         now = utc_now_iso()
         data = self.load()
-        if included == 0 and data.get("cards"):
+        if included == 0:
             data.update(
                 {
                     "schema_version": SCHEMA_VERSION,
                     "last_sync_at": now,
                     "last_sync_status": "error",
-                    "last_sync_error": "refresh produced no usable cards; preserving last good cache",
+                    "last_sync_error": "refresh produced no usable cards",
                     "included_count": 0,
                     "skipped_count": skipped,
                 }
@@ -85,6 +94,19 @@ class JsonCardCache:
         return data
 
     def update_failure(self, error: str) -> dict[str, Any]:
+        data = self.load()
+        data.update(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "last_sync_at": utc_now_iso(),
+                "last_sync_status": "error",
+                "last_sync_error": error,
+            }
+        )
+        self.save(data)
+        return data
+
+    def mark_stale(self, error: str) -> dict[str, Any]:
         data = self.load()
         data.update(
             {

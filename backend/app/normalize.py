@@ -33,8 +33,9 @@ def _field_value(fields: dict[str, Any], names: tuple[str, ...]) -> str:
 
 
 def _plain_text(value: str) -> str:
+    value = html.unescape(value)
     value = _HTML_TAG_RE.sub("", value)
-    return html.unescape(value).strip()
+    return html.escape(value, quote=False).strip()
 
 
 def _sanitize_ruby_html(value: str) -> str:

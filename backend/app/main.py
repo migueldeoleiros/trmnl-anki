@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
@@ -16,14 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 def build_service(settings: Settings) -> CardService:
-    client = AnkiConnectClient(settings.ankiconnect_url, settings.ankiconnect_timeout_seconds)
+    client = AnkiConnectClient(
+        settings.ankiconnect_url,
+        settings.ankiconnect_timeout_seconds,
+        settings.ankiconnect_api_key,
+    )
     return CardService(settings, client, JsonCardCache(settings.cache_path))
 
 
 async def sync_loop(service: CardService, interval_seconds: int) -> None:
+    settings = service.settings
     while True:
-        await service.refresh_from_anki(trigger_sync=True)
-        await asyncio.sleep(interval_seconds)
+        result = await service.refresh_from_anki(trigger_sync=True)
+        sleep_seconds = interval_seconds if result.get("last_sync_status") == "ok" else settings.sync_retry_interval_seconds
+        await asyncio.sleep(sleep_seconds)
 
 
 @asynccontextmanager
@@ -45,6 +51,9 @@ async def lifespan(app: FastAPI):
     finally:
         if task:
             task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        await service.client.aclose()
 
 
 _settings = get_settings()
@@ -60,6 +69,9 @@ app = FastAPI(
 
 @app.get("/health")
 def health() -> dict:
+    service = getattr(app.state, "service", None)
+    if service is None:
+        return {"status": "starting", "cache_cards": 0, "last_sync_status": None}
     cache = app.state.service.cache.load()
     return {
         "status": "ok",

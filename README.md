@@ -2,7 +2,7 @@
 
 Personal TRMNL hosted Private Plugin for showing one cached Anki card at a time on a TRMNL OG display. The intended backend is Python/FastAPI, with Anki Desktop plus AnkiConnect running inside the same Docker/Portainer stack.
 
-This repository contains a small FastAPI backend, Docker/Portainer packaging, sanitized fixtures, docs skeleton, and the TRMNL template contract.
+This repository contains a small FastAPI backend, Docker/Portainer packaging, a headless Anki/KasmVNC image, sanitized fixtures, docs, and the TRMNL template contract.
 
 ## Architecture
 
@@ -29,16 +29,18 @@ Key rules:
 - `fixtures/` - sanitized current-card and AnkiConnect example payloads.
 - `docs/` - setup, operations, privacy, reverse proxy, and bootstrap notes.
 - `Dockerfile` - backend container packaging.
-- `docker-compose.yml` - Portainer-ready stack skeleton with backend plus documented Anki service placeholder.
+- `anki/` - KasmVNC-based Anki Desktop image that installs AnkiConnect into the persistent profile.
+- `docker-compose.yml` - Portainer-ready stack with backend plus headless Anki service.
 - `.env.example` - documented environment keys without secrets.
 
 ## Quick Start
 
 1. Copy `.env.example` to `.env` and edit public URL, private path, deck, cadence, and sync settings.
-2. Replace the placeholder `anki` service image/command with a real Anki Desktop + AnkiConnect runtime before using live sync.
+2. Set `KASMVNC_PASSWORD` before exposing the Anki admin UI.
+3. Run local checks: `python -m compileall -q backend && python -m pytest`, then `docker compose --env-file .env.example config`.
 4. Deploy `docker-compose.yml` in Portainer.
-5. Bootstrap Anki through admin-only noVNC/KasmVNC, install AnkiConnect, sync the `Core 2000` deck, then close public access to noVNC.
-6. Reverse proxy only the backend cached endpoint over HTTPS.
+5. For first setup only, add `docker-compose.bootstrap.yml` to expose KasmVNC on localhost/admin-only access, open Anki, sign in to AnkiWeb, and sync the `Core 2000` deck.
+6. Remove the bootstrap override, then reverse proxy only the backend cached endpoint over HTTPS.
 7. Paste `trmnl-plugin/template.liquid` and `trmnl-plugin/styles.css` into a hosted TRMNL Private Plugin using Polling.
 
 ## Privacy
@@ -52,13 +54,12 @@ Never commit `.env`, Anki profile data, `.anki2` files, media collections, cache
 Implemented now:
 
 - FastAPI cached current-card endpoint from Worker A.
+- KasmVNC-based Anki image that downloads Anki launcher and installs AnkiConnect on startup.
 - Original TRMNL full-screen Liquid/CSS template with no QR code.
 - Sanitized fixtures for normal, empty, stale, and long-text states.
-- Docker/Portainer packaging skeleton.
-- Docs skeleton for setup, operations, privacy, reverse proxy, and noVNC/bootstrap.
+- Docker/Portainer packaging.
+- Docs for setup, operations, privacy, reverse proxy, and noVNC/bootstrap.
 
 Not implemented yet:
 
-- Real headless Anki Desktop image/script.
-- A runnable live `anki` service in `docker-compose.yml`; current service is a placeholder for the runtime spike.
 - Full runtime validation against a live Anki Desktop/AnkiConnect container.

@@ -123,6 +123,7 @@ AnkiDroid -> AnkiWeb -> hourly configurable sync -> headless Anki Desktop contai
 
 ## Evidence Log
 - 2026-05-09 SPEC: User approved direction captured in `.opencode/specs/trmnl-anki.md` -> ready for build handoff.
+- 2026-05-09 BUILD: Added FastAPI backend, TRMNL template, Docker packaging, AGENTS.md, and headless Anki/KasmVNC image. Live runtime proof still pending.
 
 ## Risks / Blockers
 - Headless Anki is brittle and heavy, but required because AnkiConnect is the only approved data source.

@@ -11,7 +11,16 @@ Default sync interval is `3600` seconds. Backend cache metadata records:
 
 Failed sync must not clear the existing card cache. TRMNL should continue showing stale cached cards with `stale: true`.
 
-The backend settings are prefixed with `TRMNL_ANKI_`. Enable automatic refreshes with `TRMNL_ANKI_BACKGROUND_SYNC_ENABLED=true` after the Anki runtime is proven stable.
+The backend settings are prefixed with `TRMNL_ANKI_`. Automatic refreshes are enabled by default, but they only populate cards after the Anki runtime is bootstrapped and AnkiConnect responds at `http://anki:8765`.
+
+## Anki Runtime
+
+- `anki/Dockerfile` installs the current Anki launcher into a KasmVNC desktop image.
+- `anki/start-anki.sh` installs AnkiConnect into `/config/Anki2/addons21/2055492159` if missing and writes its config on each start.
+- `ANKICONNECT_BIND_ADDRESS=172.28.0.10` keeps AnkiConnect bound to the static internal-network address instead of all container interfaces; do not change this to `0.0.0.0` unless you also isolate/firewall the service.
+- `ANKICONNECT_API_KEY` is the compose-level source of truth; compose passes it to both AnkiConnect and the backend's `TRMNL_ANKI_ANKICONNECT_API_KEY` setting.
+- Slow AnkiWeb sync gets a longer `TRMNL_ANKI_ANKICONNECT_SYNC_TIMEOUT_SECONDS`; if sync fails, backend still tries local card extraction and marks the cache stale.
+- If AnkiConnect is not ready during backend startup, the background loop retries every `TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS` until a successful refresh, then returns to `TRMNL_ANKI_SYNC_INTERVAL_SECONDS`.
 
 ## Cache
 

@@ -20,7 +20,11 @@ Important defaults:
 
 ## Portainer
 
-Use `docker-compose.yml` as a stack template. The backend service is wired to `backend.app.main:app`. The `anki` service is a documented placeholder until the real Anki Desktop runtime is added. Keep the `internal` network internal so AnkiConnect is unavailable from the internet.
+Use `docker-compose.yml` as a stack template. The backend service is wired to `backend.app.main:app`. The `anki` service builds `anki/Dockerfile`, launches Anki Desktop through KasmVNC, and installs AnkiConnect into the persistent `/config/Anki2` profile. Keep the `internal` network internal so AnkiConnect is unavailable from the internet.
+
+The first Anki startup still needs manual setup through KasmVNC/noVNC: sign in to AnkiWeb and choose the correct initial sync direction, usually download from AnkiWeb for a fresh server profile.
+
+Use `docker-compose.bootstrap.yml` only during setup. It publishes KasmVNC to `127.0.0.1:${KASMVNC_PORT:-3000}` and fails if `KASMVNC_PASSWORD` is empty. Remove the override after profile/bootstrap work is done.
 
 ## TRMNL
 

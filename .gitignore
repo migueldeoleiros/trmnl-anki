@@ -12,3 +12,4 @@ anki-profile/
 *.apkg
 *.anki2
 collection.media/
+*.tar.zst
