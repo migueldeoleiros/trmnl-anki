@@ -9,7 +9,7 @@
 - Data source is AnkiConnect only; do not add AnkiWeb scraping, direct SQLite reads, or non-AnkiConnect APIs.
 - AnkiConnect must stay internal-only on Docker networking; default compose binds it to `172.28.0.10:8765`, and public traffic should reach only the FastAPI cached endpoint.
 - Backend must not mutate Anki data or proxy arbitrary AnkiConnect actions.
-- TRMNL polls cached JSON from `GET /api/current`; that route must not trigger live Anki sync or slow AnkiConnect calls.
+- TRMNL polls cached JSON from `GET /api/random`; that route must not trigger live Anki sync or slow AnkiConnect calls.
 - Default deck/query is `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards; keep deck names quoted in Anki search strings.
 
 ## Backend Notes
@@ -17,18 +17,18 @@
 - Settings use `pydantic-settings` with `TRMNL_ANKI_` env prefix from `backend/app/config.py`.
 - `pyproject.toml` sets `pythonpath = backend`; run tests from repo root with `python -m pytest` after installing `backend/requirements-dev.txt` or `backend/requirements-dev.lock`.
 - FastAPI docs are disabled by default via `TRMNL_ANKI_EXPOSE_API_DOCS=false`; do not re-enable in default compose.
-- JSON cache is v1 persistence; preserve last-good cards on Anki failures or empty normalization results.
+- JSON cache is v2 per-query persistence; preserve last-good cards on Anki failures or empty normalization results.
 - Background sync retries with `TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS` after failures so startup races with AnkiConnect do not stay empty for an hour.
 - AnkiWeb sync has a separate `TRMNL_ANKI_ANKICONNECT_SYNC_TIMEOUT_SECONDS`; if sync fails, backend should still try local card extraction and mark cache stale.
 
 ## TRMNL Plugin Notes
-- `trmnl-plugin/template.html` expects the `/api/current` shape shown in `fixtures/current-normal.json`.
+- `trmnl-plugin/template.html` expects the `/api/random` shape shown in `fixtures/random-normal.json`.
 - `card.furigana_html` is intended to render as ruby markup; verify on TRMNL before changing the backend/template contract.
 - Layout is inspired by `trmnl-japanese`, but that repo had no explicit license; do not copy its code/CSS verbatim.
 
 ## Docker / Ops Gotchas
 - `docker compose --env-file .env.example config` is the normal lightweight compose verification; after bootstrap changes, also check `KASMVNC_PASSWORD=localtest-password docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
-- Backend publishes `${BACKEND_PORT:-8000}:8000` on all host interfaces so containerized reverse proxies can reach it; reverse proxy should expose only private TRMNL paths mapped to cached `/api/current` queries.
+- Backend publishes `${BACKEND_PORT:-8000}:8000` on all host interfaces so containerized reverse proxies can reach it; reverse proxy should expose only private TRMNL paths mapped to cached `/api/random` queries.
 - Real MVP still requires runtime proof against the headless Anki service: `version`, `deckNames`, `findCards`, `cardsInfo`, sync, and restart persistence.
 - Keep `.env`, Anki profile data, `.anki2`, media, exported decks, and cached real cards out of git.
 

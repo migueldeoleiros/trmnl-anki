@@ -97,9 +97,8 @@ def furigana_to_html(value: str) -> str:
 
 def reading_text(value: str) -> str:
     plain = _plain_text(value)
-    readings = [match.group(2) for match in _FURIGANA_RE.finditer(plain)]
-    if readings:
-        return "".join(readings)
+    if _FURIGANA_RE.search(plain):
+        return _FURIGANA_RE.sub(lambda match: match.group(2), plain)
     return plain
 
 
@@ -155,8 +154,10 @@ def _sentence_furigana_html(fields: dict[str, Any]) -> str:
     explicit = _field_value(fields, ("Sentence-Furigana",))
     if explicit:
         return furigana_to_html(explicit)
-    sentence = _field_value(fields, FIELD_ORDER["sentence"])
     reading = _field_value(fields, FIELD_ORDER["sentence_reading"])
+    if _FURIGANA_RE.search(_plain_text(reading)):
+        return furigana_to_html(reading)
+    sentence = _field_value(fields, FIELD_ORDER["sentence"])
     return sentence_to_ruby_html(sentence, reading)
 
 

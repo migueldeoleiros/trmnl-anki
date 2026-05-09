@@ -7,7 +7,7 @@ Expose only the backend cached JSON endpoint. Do not expose AnkiConnect, noVNC/K
 Recommended controls:
 
 - HTTPS only.
-- Long random endpoint path, for example `/trmnl/<token>/current`.
+- Long random endpoint path, for example `/trmnl/<token>/random`.
 - Rate limit the endpoint.
 - Avoid logging full JSON payloads.
 - Disable public indexing and directory listings.

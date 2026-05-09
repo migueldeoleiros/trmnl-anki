@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import asyncio
 import logging
+import secrets
 
 from .ankiconnect import AnkiConnectClient
 from .api_query import QuerySpec, resolve_current_query
 from .cache import JsonCardCache, utc_now_iso
 from .config import Settings
 from .normalize import normalize_cards
-from .rotation import card_for_slot, slot_id_for
 
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ class CardService:
         self._sync_lock = asyncio.Lock()
         self.default_spec = resolve_current_query(
             default_query=settings.card_query,
-            cadence_minutes=settings.cadence_minutes,
             default_cadence_minutes=settings.cadence_minutes,
             max_query_length=settings.max_query_length,
         )
@@ -86,16 +85,14 @@ class CardService:
             refreshed.append(await self.refresh_query(spec, trigger_sync=False))
         return refreshed
 
-    def current(self, now: datetime | None = None, *, request: QuerySpec | None = None) -> dict:
+    def random(self, now: datetime | None = None, *, request: QuerySpec | None = None) -> dict:
         spec = request or self.default_spec
         now = now or datetime.now(timezone.utc)
         self.cache.register_pending(spec, now=now)
         cache = self.cache.load()
         entry = self.cache.entry_for(spec.query_key, data=cache) or {}
-        cadence_minutes = entry.get("cadence_minutes") or spec.cadence_minutes
         cards = entry.get("cards") or []
-        slot_id = slot_id_for(now, cadence_minutes)
-        card = card_for_slot(cards, slot_id)
+        card = secrets.choice(cards) if cards else None
         sync_status = entry.get("last_sync_status")
         status = "ok" if card else "empty"
         if not card and sync_status in ("pending", "never", None):
@@ -112,8 +109,6 @@ class CardService:
             "last_sync_status": sync_status,
             "last_sync_error": entry.get("last_sync_error"),
             "error": entry.get("last_sync_error"),
-            "slot_id": slot_id,
-            "cadence_minutes": cadence_minutes,
             "stale": bool(stale),
             "card": card,
             "query_key": spec.query_key,

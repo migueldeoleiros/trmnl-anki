@@ -4,21 +4,22 @@ from app.ankiconnect import AnkiConnectClient
 from app.cache import JsonCardCache
 from app.config import Settings
 from app.normalize import furigana_to_html, normalize_card, reading_text, sentence_to_ruby_html
-from app.rotation import card_for_slot, slot_id_for
 from app.service import CardService
 
 
-def test_slot_rotation_is_stable_within_slot_and_changes_next_slot():
-    cards = [{"headword": "a"}, {"headword": "b"}]
-    first = datetime(2026, 5, 9, 12, 0, 1, tzinfo=timezone.utc)
-    same_slot = datetime(2026, 5, 9, 12, 29, 59, tzinfo=timezone.utc)
-    next_slot = datetime(2026, 5, 9, 12, 30, 0, tzinfo=timezone.utc)
+def test_random_card_uses_cached_cards_without_slot_rotation(tmp_path, monkeypatch):
+    settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
+    cache = JsonCardCache(settings.cache_path)
+    cache.update_success([{"headword": "一"}, {"headword": "二"}], included=2, skipped=0)
+    service = CardService(settings, client=None, cache=cache)  # type: ignore[arg-type]
+    monkeypatch.setattr("app.service.secrets.choice", lambda cards: cards[1])
 
-    first_slot = slot_id_for(first, 30)
-    assert slot_id_for(same_slot, 30) == first_slot
-    assert slot_id_for(next_slot, 30) == first_slot + 1
-    assert card_for_slot(cards, first_slot) == card_for_slot(cards, slot_id_for(same_slot, 30))
-    assert card_for_slot(cards, first_slot) != card_for_slot(cards, slot_id_for(next_slot, 30))
+    payload = service.random(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
+
+    assert payload["status"] == "ok"
+    assert payload["card"] == {"headword": "二"}
+    assert "slot_id" not in payload
+    assert "cadence_minutes" not in payload
 
 
 def test_normalize_card_uses_approved_field_fallbacks_and_ruby():
@@ -74,7 +75,7 @@ def test_current_marks_stale_but_returns_cached_card(tmp_path):
     cache.update_failure("anki offline")
     service = CardService(settings, client=None, cache=cache)  # type: ignore[arg-type]
 
-    payload = service.current(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
+    payload = service.random(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
 
     assert payload["status"] == "ok"
     assert payload["stale"] is True
@@ -150,10 +151,36 @@ def test_reading_text_extracts_bracket_reading():
     assert reading_text("朝食[ちょうしょく]") == "ちょうしょく"
 
 
+def test_reading_text_preserves_sentence_kana_around_brackets():
+    assert reading_text("私[わたし]の 弟[おとうと]です") == "わたしのおとうとです"
+
+
 def test_sentence_to_ruby_html_aligns_expression_and_reading():
     assert (
         sentence_to_ruby_html("朝食を食べてから学校へ行きます。", "ちょうしょくをたべてからがっこうへいきます。")
         == "<ruby>朝食<rt>ちょうしょく</rt></ruby>を<ruby>食<rt>た</rt></ruby>べてから<ruby>学校<rt>がっこう</rt></ruby>へ<ruby>行<rt>い</rt></ruby>きます。"
+    )
+
+
+def test_sentence_furigana_uses_anki_bracket_reading_markup():
+    raw = {
+        "cardId": 123,
+        "deckName": "Core 2000",
+        "fields": {
+            "Vocabulary-Kanji": {"value": "高校生"},
+            "Vocabulary-English": {"value": "high school student"},
+            "Expression": {"value": "私の弟は高校生です。"},
+            "Reading": {"value": "私[わたし]の 弟[おとうと]は 高校生[こうこうせい]です。"},
+        },
+    }
+
+    card = normalize_card(raw)
+
+    assert card["sentence_reading"] == "わたしのおとうとはこうこうせいです。"
+    assert card["sentence_furigana_html"] == (
+        "<ruby>私<rt>わたし</rt></ruby>の"
+        "<ruby>弟<rt>おとうと</rt></ruby>は"
+        "<ruby>高校生<rt>こうこうせい</rt></ruby>です。"
     )
 
 
@@ -267,7 +294,7 @@ def test_current_empty_cache_uses_empty_status(tmp_path):
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     service = CardService(settings, client=None, cache=JsonCardCache(settings.cache_path))  # type: ignore[arg-type]
 
-    payload = service.current(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
+    payload = service.random(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
 
     assert payload["status"] == "not_ready"
     assert payload["stale"] is True

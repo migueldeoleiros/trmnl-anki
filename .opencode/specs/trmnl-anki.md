@@ -8,6 +8,8 @@ owner: build
 
 # TRMNL Anki Private Plugin
 
+> Superseded note: endpoint naming and card selection behavior are superseded by `.opencode/specs/trmnl-anki-flexible-api.md` and the user-approved random API change. The public TRMNL endpoint is `GET /api/random`, and each call returns a random cached card instead of deterministic `slot_id`/`cadence_minutes` rotation.
+
 ## Metadata
 - Active spec path: .opencode/specs/trmnl-anki.md
 - Approval state: approved

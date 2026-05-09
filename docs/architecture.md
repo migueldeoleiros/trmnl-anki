@@ -15,6 +15,6 @@ AnkiDroid
   -> TRMNL hosted Private Plugin Polling
 ```
 
-The current-card response should match `fixtures/current-normal.json` and include status metadata so the Liquid template can render empty, stale, and error states. The current backend exposes this at `/api/current`.
+The random-card response should match `fixtures/random-normal.json` and include status metadata so the Liquid template can render empty, stale, and error states. The backend exposes this at `/api/random`.
 
-Card rotation should use deterministic wall-clock slots: `floor(now / cadence_minutes)`. That keeps the same card stable within a refresh slot and changes predictably at the next slot.
+TRMNL owns poll cadence. Each `/api/random` call selects a random card from the matching cached query entry without triggering live AnkiConnect calls.

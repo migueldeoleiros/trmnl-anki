@@ -7,8 +7,6 @@
   "last_sync_status": "ok",
   "last_sync_error": null,
   "error": null,
-  "slot_id": 987654,
-  "cadence_minutes": 30,
   "stale": false,
   "card": {
     "card_id": 123456789,

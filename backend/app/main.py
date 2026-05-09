@@ -79,21 +79,28 @@ def health() -> dict:
     }
 
 
-@app.get("/api/current")
-def current(
+@app.get("/api/random")
+def random_card(
     query: str | None = None,
     deck: str | None = None,
     filter: str | None = None,
-    cadence_minutes: int | None = None,
 ) -> dict:
     settings = app.state.settings
     request = resolve_current_query(
         query=query,
         deck=deck,
         filter=filter,
-        cadence_minutes=cadence_minutes,
         default_query=settings.card_query,
         default_cadence_minutes=settings.cadence_minutes,
         max_query_length=settings.max_query_length,
     )
-    return app.state.service.current(request=request)
+    return app.state.service.random(request=request)
+
+
+@app.get("/api/current")
+def current(
+    query: str | None = None,
+    deck: str | None = None,
+    filter: str | None = None,
+) -> dict:
+    return random_card(query=query, deck=deck, filter=filter)

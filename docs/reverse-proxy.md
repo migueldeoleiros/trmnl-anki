@@ -1,14 +1,14 @@
 # Reverse Proxy
 
-The reverse proxy should terminate TLS and forward only the cached current-card route to the backend.
+The reverse proxy should terminate TLS and forward only the cached random-card route to the backend.
 
 Example route shape:
 
 ```text
-https://anki.example.com/trmnl/<long-random-token>/current -> http://backend:8000/api/current
+https://anki.example.com/trmnl/<long-random-token>/random -> http://backend:8000/api/random
 ```
 
-If TRMNL uses query-specific URLs, preserve the query string when forwarding, for example `?deck=Core%202000&filter=is:review&cadence_minutes=30`.
+If TRMNL uses query-specific URLs, preserve the query string when forwarding, for example `?deck=Core%202000&filter=is:review`.
 
 Operational recommendations:
 

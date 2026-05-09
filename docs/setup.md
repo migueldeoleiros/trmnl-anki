@@ -15,7 +15,6 @@ Important defaults:
 
 - `BACKEND_PORT=8010` to avoid common Portainer port `8000` conflicts.
 - `TRMNL_ANKI_SYNC_INTERVAL_SECONDS=3600`
-- `TRMNL_ANKI_CADENCE_MINUTES=30`
 - `TRMNL_ANKI_CARD_QUERY=deck:"Core 2000" (is:learn or is:review)`
 - `TRMNL_ANKI_FALLBACK_QUERY=deck:"Core 2000" (is:learn or is:review)`
 
@@ -29,4 +28,4 @@ Use `docker-compose.bootstrap.yml` only during setup. It publishes KasmVNC to `1
 
 ## TRMNL
 
-Create a hosted Private Plugin in Polling mode and point it at the reverse-proxied backend current-card endpoint. See `trmnl-plugin/settings-example.md`.
+Create a hosted Private Plugin in Polling mode and point it at the reverse-proxied backend random-card endpoint. See `trmnl-plugin/settings-example.md`.

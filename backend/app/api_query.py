@@ -33,15 +33,10 @@ def resolve_current_query(
     query: str | None = None,
     deck: str | None = None,
     filter: str | None = None,
-    cadence_minutes: int | None = None,
     default_cadence_minutes: int = DEFAULT_CADENCE_MINUTES,
     default_query: str,
     max_query_length: int = DEFAULT_MAX_QUERY_LENGTH,
 ) -> QuerySpec:
-    cadence = cadence_minutes if cadence_minutes is not None else default_cadence_minutes
-    if cadence not in ALLOWED_CADENCE_MINUTES:
-        raise HTTPException(status_code=400, detail="cadence_minutes must be one of 15, 30, or 60")
-
     has_query = query is not None
     has_deck_or_filter = deck is not None or filter is not None
     if has_query and has_deck_or_filter:
@@ -72,7 +67,7 @@ def resolve_current_query(
         effective_query=effective_query,
         query_key=query_key_for(effective_query),
         query_label=query_label,
-        cadence_minutes=cadence,
+        cadence_minutes=default_cadence_minutes,
     )
 
 

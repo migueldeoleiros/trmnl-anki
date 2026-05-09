@@ -3,8 +3,6 @@
   "status": "empty",
   "generated_at": "2026-05-09T12:30:00Z",
   "last_sync_at": null,
-  "slot_id": 987654,
-  "cadence_minutes": 30,
   "stale": false,
   "card": null,
   "error": "No usable cards are cached yet."

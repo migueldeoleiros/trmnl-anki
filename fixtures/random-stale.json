@@ -3,8 +3,6 @@
   "status": "ok",
   "generated_at": "2026-05-09T12:30:00Z",
   "last_sync_at": "2026-05-08T10:00:00Z",
-  "slot_id": 987654,
-  "cadence_minutes": 30,
   "stale": true,
   "card": {
     "headword": "約束",

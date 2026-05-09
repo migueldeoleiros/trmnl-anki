@@ -14,23 +14,22 @@ owner: build
 - Owner: build
 
 ## Objective
-Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cached API. Return selected extra text data so TRMNL display can change without backend edits, especially sentence furigana. Generalize `GET /api/current` so users can request different Anki searches via URL query params while keeping AnkiConnect internal and keeping TRMNL polls cached-only.
+Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cached API. Return selected extra text data so TRMNL display can change without backend edits, especially sentence furigana. Generalize `GET /api/random` so users can request different Anki searches via URL query params while keeping AnkiConnect internal and keeping TRMNL polls cached-only.
 
 ## Non-Goals
 - Do not add AnkiWeb scraping, direct SQLite reads, or non-AnkiConnect APIs.
 - Do not mutate Anki data.
 - Do not proxy arbitrary AnkiConnect actions.
-- Do not make `GET /api/current` trigger live Anki sync or slow AnkiConnect calls.
+- Do not make `GET /api/random` trigger live Anki sync or slow AnkiConnect calls.
 - Do not add all raw AnkiConnect data to the public payload.
 - Do not commit secrets, real card cache/profile/media/exported decks, or real field inspection text.
 
 ## Constraints
 - AnkiConnect remains the only data source and must remain internal-only.
-- `GET /api/current` must be cache-only; cold custom queries return `not_ready` and register background fill.
+- `GET /api/random` must be cache-only; cold custom queries return `not_ready` and register background fill.
 - Preserve last-good cards for a query on Anki failures or empty normalization results.
 - Failure for one query must not affect other cache entries.
 - Keep deck names quoted and escaped in composed Anki search strings.
-- URL cadence values allowed only `15`, `30`, or `60`.
 - Default cache limits: max query length `500`, max cached queries `25`, max cards/query `250`, refresh concurrency `1`.
 - Metadata must be privacy-safe by default: return `query_key` and `query_label`, not raw query.
 - Selected extras only: `sentence_furigana_html`, `sentence_reading`, and limited selected fields with strict sanitizer.
@@ -38,16 +37,16 @@ Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cac
 - Plain selected fields remain escaped/plain text.
 
 ## Relevant Files
-- `backend/app/main.py` - FastAPI route surface for `GET /api/current` params, validation, and response metadata.
+- `backend/app/main.py` - FastAPI route surface for `GET /api/random` params, validation, and response metadata.
 - `backend/app/service.py` - Background sync, per-query refresh orchestration, startup prewarm, and cached-only request handling.
 - `backend/app/cache.py` - Cache v2 persistence, v1 migration, pending entries, atomic writes, eviction, and per-query last-good state.
-- `backend/app/config.py` - Limits, default query, cadence, and environment configuration.
+- `backend/app/config.py` - Limits, default query, and environment configuration.
 - `backend/app/normalize.py` - Card normalization extras, selected fields, sentence furigana/readings, and sanitizer integration.
 - `backend/app/ankiconnect.py` - Read-only AnkiConnect calls for field inspection and per-query extraction.
 - `backend/app/rotation.py` - Card selection behavior against per-query card sets.
 - `backend/tests/test_rotation_cache_normalize.py` - Existing backend contract tests to extend for cache, params, normalization, and sanitizer behavior.
-- `fixtures/current-normal.json` - Existing response fixture to update for added metadata and card extras.
-- `fixtures/current-not-ready.json` - New not-ready fixture for cold query response.
+- `fixtures/random-normal.json` - Existing response fixture to update for added metadata and card extras.
+- `fixtures/random-not-ready.json` - New not-ready fixture for cold query response.
 - `trmnl-plugin/template.html` - TRMNL template should prefer `card.sentence_furigana_html` and fallback to `card.sentence`.
 - `README.md` - User-facing API/query/cadence/cache behavior documentation.
 - `backend/README.md` - Backend operation, configuration, and verification documentation.
@@ -57,7 +56,7 @@ Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cac
 - `AGENTS.md` - Guidance updates only if implementation constraints change.
 
 ## Decisions
-- URL shape uses query params on `GET /api/current`.
+- URL shape uses query params on `GET /api/random`.
 - Arbitrary Anki search strings are allowed through `query`.
 - Payload exposes selected extras, not all raw card data.
 - Cache is per-query.
@@ -67,8 +66,7 @@ Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cac
 - Preserve and migrate current v1 cache into the default query entry.
 - Atomic cache writes remain required.
 - `query_key = hash(schema_version + normalized effective_query + selected field contract)`.
-- `cadence_minutes` is not part of `query_key`; cadence is per-query metadata.
-- Cadence conflicts use shortest allowed cadence; later longer cadences do not lengthen an existing query cadence.
+- TRMNL owns poll cadence; each API call returns one random cached card.
 - Eviction prefers entries with no cards, then oldest `last_accessed_at`; never evict default unless cache has only default.
 - Metadata uses `query_key` and `query_label` by default; do not echo raw query.
 - `query_label` values are `default` for no params, deck name for `deck=...`, and `custom` for raw `query=...`.
@@ -77,10 +75,9 @@ Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cac
 - Merge order: contract tests -> cache/API -> scheduler/normalizer -> template/docs -> full verification.
 
 ## Request Contract
-- `GET /api/current`
-- `GET /api/current?query=deck:%22Core%202000%22%20(is:learn%20or%20is:review)`
-- `GET /api/current?deck=Core%202000&filter=is:review`
-- Optional `cadence_minutes=15|30|60`.
+- `GET /api/random`
+- `GET /api/random?query=deck:%22Core%202000%22%20(is:learn%20or%20is:review)`
+- `GET /api/random?deck=Core%202000&filter=is:review`
 - Mixing `query` with `deck` or `filter` returns 400.
 - Empty custom query returns 400.
 - Query over 500 chars returns 400.
@@ -89,10 +86,10 @@ Evolve the proof-of-concept TRMNL Anki backend/template into a more flexible cac
 - No params use default env query.
 
 ## Response Contract
-- Existing fields remain: `schema_version`, `status`, `generated_at`, `last_sync_at`, `last_success_at`, `last_sync_status`, `last_sync_error`, `error`, `slot_id`, `cadence_minutes`, `stale`, `card`.
+- Response fields include: `schema_version`, `status`, `generated_at`, `last_sync_at`, `last_success_at`, `last_sync_status`, `last_sync_error`, `error`, `stale`, `card`.
 - Add `query_key`, `query_label`, `next_refresh_at`.
 - Do not echo raw query by default.
-- Cold miss returns `status: not_ready`, `card: null`, metadata, and registers idempotent pending entry with `first_seen_at`, `next_due_at=now`, `cadence_minutes`.
+- Cold miss returns `status: not_ready`, `card: null`, metadata, and registers idempotent pending entry with `first_seen_at` and `next_due_at=now`.
 - Failed refresh or empty normalized result preserves last-good cards for that query and marks it stale/error.
 
 ## Tasks

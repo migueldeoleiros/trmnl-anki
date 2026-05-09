@@ -8,6 +8,8 @@ owner: build
 
 # TRMNL Anki Deployment Readiness
 
+> Superseded note: endpoint naming and response contract are superseded by `.opencode/specs/trmnl-anki-flexible-api.md` and the later random API change. Use `GET /api/random` and `fixtures/random-normal.json` for current TRMNL validation; `/api/current` remains a compatibility alias only.
+
 ## Metadata
 - Active spec path: .opencode/specs/trmnl-anki-deployment-readiness.md
 - Approval state: approved

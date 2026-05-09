@@ -45,19 +45,13 @@ def test_query_key_is_stable_and_ignores_cadence():
     assert query_key_for(query, cadence_minutes=30) != query_key_for('deck:"Core 2000" is:review', cadence_minutes=30)
 
 
-def test_cadence_minutes_allows_only_contract_values():
+def test_resolve_random_query_uses_server_refresh_cadence():
     from app.api_query import resolve_current_query
 
-    for cadence in (15, 30, 60):
-        assert resolve_current_query(default_query='deck:"Core 2000"', cadence_minutes=cadence).cadence_minutes == cadence
-
-    with pytest.raises(HTTPException) as exc_info:
-        resolve_current_query(default_query='deck:"Core 2000"', cadence_minutes=45)
-
-    assert exc_info.value.status_code == 400
+    assert resolve_current_query(default_query='deck:"Core 2000"', default_cadence_minutes=30).cadence_minutes == 30
 
 
-def test_current_request_path_is_cache_only_for_cold_custom_query(tmp_path):
+def test_random_request_path_is_cache_only_for_cold_custom_query(tmp_path):
     from app.api_query import resolve_current_query
     from app.cache import JsonCardCache
     from app.config import Settings
@@ -71,7 +65,7 @@ def test_current_request_path_is_cache_only_for_cold_custom_query(tmp_path):
     service = CardService(settings, client=ExplodingClient(), cache=JsonCardCache(settings.cache_path))  # type: ignore[arg-type]
     request = resolve_current_query(query='deck:"Core 2000" is:review', default_query=settings.card_query)
 
-    payload = service.current(request=request)
+    payload = service.random(request=request)
 
     assert payload["status"] == "not_ready"
     assert payload["card"] is None
@@ -79,7 +73,7 @@ def test_current_request_path_is_cache_only_for_cold_custom_query(tmp_path):
 
 
 def test_cold_not_ready_fixture_matches_response_contract():
-    fixture = json.loads(open("fixtures/current-not-ready.json", encoding="utf-8").read())
+    fixture = json.loads(open("fixtures/random-not-ready.json", encoding="utf-8").read())
 
     assert fixture["status"] == "not_ready"
     assert fixture["card"] is None
