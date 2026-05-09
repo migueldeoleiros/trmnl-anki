@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "status": "not_ready",
+  "generated_at": "2026-05-10T12:30:00Z",
+  "last_sync_at": null,
+  "last_success_at": null,
+  "last_sync_status": "pending",
+  "last_sync_error": null,
+  "error": null,
+  "slot_id": 987654,
+  "cadence_minutes": 30,
+  "stale": true,
+  "card": null,
+  "query_key": "examplequerykey123456789",
+  "query_label": "custom",
+  "next_refresh_at": "2026-05-10T12:30:00Z"
+}

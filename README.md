@@ -19,6 +19,7 @@ Key rules:
 - The public endpoint serves cached JSON only.
 - noVNC/KasmVNC is for admin bootstrap only.
 - Default deck/query: `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards.
+- `GET /api/current` also accepts cached-only query variants: `?query=...` or `?deck=Core%202000&filter=is:review`, plus `cadence_minutes=15|30|60`.
 - Default sync interval: `3600` seconds.
 - Default TRMNL card cadence: `30` minutes; `15` is supported if TRMNL polling allows it.
 
@@ -35,7 +36,7 @@ Key rules:
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env` and edit public URL, private path, deck, cadence, sync settings, and `BACKEND_PORT` if it conflicts with an existing service.
+1. Copy `.env.example` to `.env` and edit public URL, private path, default query/deck, cadence, cache limits, sync settings, and `BACKEND_PORT` if it conflicts with an existing service.
 2. Set `KASMVNC_PASSWORD` before exposing the Anki admin UI.
 3. Run local checks: `python -m compileall -q backend && python -m pytest`, then `docker compose --env-file .env.example config`.
    For the bootstrap overlay, pass a password while rendering config: `KASMVNC_PASSWORD=change-me docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
@@ -54,9 +55,9 @@ Never commit `.env`, Anki profile data, `.anki2` files, media collections, cache
 
 Implemented now:
 
-- FastAPI cached current-card endpoint from Worker A.
+- FastAPI cached current-card endpoint with per-query cache metadata.
 - KasmVNC-based Anki image that downloads Anki launcher and installs AnkiConnect on startup.
-- Original TRMNL full-screen Liquid/CSS template with no QR code.
+- Original TRMNL full-screen Liquid/CSS template with no QR code and sentence furigana support.
 - Sanitized fixtures for normal, empty, stale, and long-text states.
 - Docker/Portainer packaging.
 - Docs for setup, operations, privacy, reverse proxy, and noVNC/bootstrap.

@@ -1,17 +1,40 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "status": "ok",
-  "generated_at": "2026-05-09T12:30:00Z",
-  "last_sync_at": "2026-05-09T12:00:00Z",
+  "generated_at": "2026-05-10T12:30:00Z",
+  "last_sync_at": "2026-05-10T12:00:00Z",
+  "last_success_at": "2026-05-10T12:00:00Z",
+  "last_sync_status": "ok",
+  "last_sync_error": null,
+  "error": null,
   "slot_id": 987654,
   "cadence_minutes": 30,
   "stale": false,
   "card": {
+    "card_id": 123456789,
+    "note_id": 22334455,
+    "deck_name": "Core 2000",
+    "model_name": "Core 2000 Japanese",
     "headword": "朝食",
     "reading": "ちょうしょく",
     "furigana_html": "<ruby>朝食<rt>ちょうしょく</rt></ruby>",
     "meaning": "breakfast",
     "sentence": "朝食を食べてから学校へ行きます。",
-    "sentence_translation": "I go to school after eating breakfast."
-  }
+    "sentence_furigana_html": "<ruby>朝食<rt>ちょうしょく</rt></ruby>を<ruby>食<rt>た</rt></ruby>べてから<ruby>学校<rt>がっこう</rt></ruby>へ<ruby>行<rt>い</rt></ruby>きます。",
+    "sentence_reading": "ちょうしょくをたべてからがっこうへいきます。",
+    "sentence_translation": "I go to school after eating breakfast.",
+    "fields": {
+      "Vocabulary-Kanji": "朝食",
+      "Vocabulary-Furigana": "朝食[ちょうしょく]",
+      "Vocabulary-Kana": "ちょうしょく",
+      "Vocabulary-English": "breakfast",
+      "Expression": "朝食を食べてから学校へ行きます。",
+      "Reading": "ちょうしょくをたべてからがっこうへいきます。",
+      "Sentence-Kana": "朝食を食べてから学校へ行きます。",
+      "Sentence-English": "I go to school after eating breakfast."
+    }
+  },
+  "query_key": "exampledefaultquerykey123456789",
+  "query_label": "default",
+  "next_refresh_at": "2026-05-10T12:30:00Z"
 }

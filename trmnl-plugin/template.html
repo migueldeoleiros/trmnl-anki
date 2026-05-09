@@ -136,7 +136,13 @@ body {
       </section>
 
       <section class="sentence-card">
-        <p class="jp">{{ card.sentence }}</p>
+        <p class="jp">
+          {% if card.sentence_furigana_html %}
+            {{ card.sentence_furigana_html }}
+          {% else %}
+            {{ card.sentence }}
+          {% endif %}
+        </p>
         <p class="en">{{ card.sentence_translation }}</p>
       </section>
     </main>

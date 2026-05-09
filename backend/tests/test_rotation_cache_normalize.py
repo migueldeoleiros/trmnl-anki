@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from app.ankiconnect import AnkiConnectClient
 from app.cache import JsonCardCache
 from app.config import Settings
-from app.normalize import furigana_to_html, normalize_card, reading_text
+from app.normalize import furigana_to_html, normalize_card, reading_text, sentence_to_ruby_html
 from app.rotation import card_for_slot, slot_id_for
 from app.service import CardService
 
@@ -26,11 +26,14 @@ def test_normalize_card_uses_approved_field_fallbacks_and_ruby():
         "cardId": 123,
         "deckName": "Core 2000",
         "fields": {
-            "Expression": {"value": "言葉"},
+            "Vocabulary-Kanji": {"value": "言葉"},
             "Vocabulary-Furigana": {"value": "言葉[ことば]"},
             "Vocabulary-English": {"value": "word"},
-            "Sentence-Kana": {"value": "いい言葉です"},
+            "Expression": {"value": "<b>いい言葉です</b>"},
+            "Reading": {"value": "いいことばです"},
+            "Sentence-Kana": {"value": "fallback sentence"},
             "Sentence-English": {"value": "It is a good word."},
+            "Unselected": {"value": "hidden"},
         },
     }
 
@@ -40,7 +43,19 @@ def test_normalize_card_uses_approved_field_fallbacks_and_ruby():
     assert card["meaning"] == "word"
     assert card["reading"] == "ことば"
     assert card["furigana_html"] == "<ruby>言葉<rt>ことば</rt></ruby>"
+    assert card["sentence"] == "いい言葉です"
+    assert card["sentence_furigana_html"] == "いい<ruby>言葉<rt>ことば</rt></ruby>です"
+    assert card["sentence_reading"] == "いいことばです"
     assert card["sentence_translation"] == "It is a good word."
+    assert card["fields"] == {
+        "Vocabulary-Kanji": "言葉",
+        "Vocabulary-Furigana": "言葉[ことば]",
+        "Vocabulary-English": "word",
+        "Expression": "いい言葉です",
+        "Reading": "いいことばです",
+        "Sentence-Kana": "fallback sentence",
+        "Sentence-English": "It is a good word.",
+    }
 
 
 def test_cache_preserves_cards_after_failed_refresh(tmp_path):
@@ -70,6 +85,31 @@ def test_existing_ruby_html_is_preserved_without_unsafe_tags():
     raw = '<ruby class="x">朝食<rt>ちょうしょく</rt></ruby><script>alert(1)</script>'
 
     assert furigana_to_html(raw) == "<ruby>朝食<rt>ちょうしょく</rt></ruby>"
+
+
+def test_sentence_furigana_prefers_ruby_field_and_strips_disallowed_html():
+    raw = {
+        "cardId": 123,
+        "deckName": "Core 2000",
+        "fields": {
+            "Expression": {"value": "朝食"},
+            "Vocabulary-Kanji": {"value": "朝食"},
+            "Vocabulary-English": {"value": "breakfast"},
+            "Sentence-Furigana": {
+                "value": '<ruby onclick="x">朝食<rt>ちょうしょく</rt></ruby><img src=x><script>x()</script>'
+            },
+            "Sentence-Reading": {"value": "ちょうしょく"},
+            "Sentence-Kana": {"value": "<b>朝食</b>"},
+        },
+    }
+
+    card = normalize_card(raw)
+
+    assert card["sentence_furigana_html"] == "<ruby>朝食<rt>ちょうしょく</rt></ruby>"
+    assert card["sentence_reading"] == "ちょうしょく"
+    assert card["fields"]["Sentence-Furigana"] == "朝食ちょうしょく"
+    assert "onclick" not in card["sentence_furigana_html"]
+    assert "img" not in card["sentence_furigana_html"]
 
 
 def test_cache_corruption_returns_error_state(tmp_path):
@@ -110,20 +150,49 @@ def test_reading_text_extracts_bracket_reading():
     assert reading_text("朝食[ちょうしょく]") == "ちょうしょく"
 
 
+def test_sentence_to_ruby_html_aligns_expression_and_reading():
+    assert (
+        sentence_to_ruby_html("朝食を食べてから学校へ行きます。", "ちょうしょくをたべてからがっこうへいきます。")
+        == "<ruby>朝食<rt>ちょうしょく</rt></ruby>を<ruby>食<rt>た</rt></ruby>べてから<ruby>学校<rt>がっこう</rt></ruby>へ<ruby>行<rt>い</rt></ruby>きます。"
+    )
+
+
 def test_plain_fields_escape_encoded_html():
     raw = {
         "cardId": 123,
         "deckName": "Core 2000",
         "fields": {
             "Expression": {"value": "&lt;script&gt;alert(1)&lt;/script&gt;言葉"},
+            "Vocabulary-Kana": {"value": "ことば"},
             "Vocabulary-English": {"value": "&lt;b&gt;word&lt;/b&gt;"},
         },
     }
 
     card = normalize_card(raw)
 
-    assert card["headword"] == "alert(1)言葉"
+    assert card["headword"] == "ことば"
+    assert card["sentence"] == "言葉"
     assert card["meaning"] == "word"
+
+
+def test_expression_without_vocabulary_kanji_is_sentence_not_headword():
+    raw = {
+        "cardId": 123,
+        "deckName": "Core 2000",
+        "fields": {
+            "Vocabulary-Kana": {"value": "ちょうしょく"},
+            "Vocabulary-English": {"value": "breakfast"},
+            "Expression": {"value": "朝食を食べます。"},
+            "Reading": {"value": "ちょうしょくをたべます。"},
+        },
+    }
+
+    card = normalize_card(raw)
+
+    assert card["headword"] == "ちょうしょく"
+    assert card["sentence"] == "朝食を食べます。"
+    assert card["sentence_furigana_html"] == "<ruby>朝食<rt>ちょうしょく</rt></ruby>を<ruby>食<rt>た</rt></ruby>べます。"
+    assert card["sentence_reading"] == "ちょうしょくをたべます。"
 
 
 def test_ankiconnect_client_includes_api_key(monkeypatch):
@@ -200,6 +269,6 @@ def test_current_empty_cache_uses_empty_status(tmp_path):
 
     payload = service.current(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
 
-    assert payload["status"] == "empty"
-    assert payload["stale"] is False
+    assert payload["status"] == "not_ready"
+    assert payload["stale"] is True
     assert payload["error"] is None

@@ -6,10 +6,10 @@
       "deckName": "Core 2000",
       "fields": {
         "Vocabulary-Kanji": { "value": "朝食" },
-        "Expression": { "value": "" },
+        "Expression": { "value": "朝食を食べてから学校へ行きます。" },
         "Vocabulary-Kana": { "value": "ちょうしょく" },
         "Vocabulary-Furigana": { "value": " 朝食[ちょうしょく]" },
-        "Reading": { "value": "" },
+        "Reading": { "value": "ちょうしょくをたべてからがっこうへいきます。" },
         "Vocabulary-English": { "value": "breakfast" },
         "Sentence-Kana": { "value": "朝食を食べてから学校へ行きます。" },
         "Sentence-English": { "value": "I go to school after eating breakfast." }

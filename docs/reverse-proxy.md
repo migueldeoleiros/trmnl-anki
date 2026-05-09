@@ -8,6 +8,8 @@ Example route shape:
 https://anki.example.com/trmnl/<long-random-token>/current -> http://backend:8000/api/current
 ```
 
+If TRMNL uses query-specific URLs, preserve the query string when forwarding, for example `?deck=Core%202000&filter=is:review&cadence_minutes=30`.
+
 Operational recommendations:
 
 - Use a long random token in the path.

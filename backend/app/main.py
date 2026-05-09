@@ -7,9 +7,10 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from .ankiconnect import AnkiConnectClient
+from .api_query import resolve_current_query
 from .cache import JsonCardCache
 from .config import Settings, get_settings
-from .service import CardService
+from .service import CardService, scheduler_loop
 
 
 logger = logging.getLogger(__name__)
@@ -21,15 +22,12 @@ def build_service(settings: Settings) -> CardService:
         settings.ankiconnect_timeout_seconds,
         settings.ankiconnect_api_key,
     )
-    return CardService(settings, client, JsonCardCache(settings.cache_path))
-
-
-async def sync_loop(service: CardService, interval_seconds: int) -> None:
-    settings = service.settings
-    while True:
-        result = await service.refresh_from_anki(trigger_sync=True)
-        sleep_seconds = interval_seconds if result.get("last_sync_status") == "ok" else settings.sync_retry_interval_seconds
-        await asyncio.sleep(sleep_seconds)
+    cache = JsonCardCache(
+        settings.cache_path,
+        default_query=settings.card_query,
+        max_cached_queries=settings.max_cached_queries,
+    )
+    return CardService(settings, client, cache)
 
 
 @asynccontextmanager
@@ -39,13 +37,14 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.service = service
     task: asyncio.Task | None = None
+    service.register_default_query()
     if settings.refresh_on_startup:
         try:
             await service.refresh_from_anki(trigger_sync=False)
         except Exception:
             logger.exception("startup refresh failed; serving existing cache")
     if settings.background_sync_enabled:
-        task = asyncio.create_task(sync_loop(service, settings.sync_interval_seconds))
+        task = asyncio.create_task(scheduler_loop(service))
     try:
         yield
     finally:
@@ -81,5 +80,20 @@ def health() -> dict:
 
 
 @app.get("/api/current")
-def current() -> dict:
-    return app.state.service.current()
+def current(
+    query: str | None = None,
+    deck: str | None = None,
+    filter: str | None = None,
+    cadence_minutes: int | None = None,
+) -> dict:
+    settings = app.state.settings
+    request = resolve_current_query(
+        query=query,
+        deck=deck,
+        filter=filter,
+        cadence_minutes=cadence_minutes,
+        default_query=settings.card_query,
+        default_cadence_minutes=settings.cadence_minutes,
+        max_query_length=settings.max_query_length,
+    )
+    return app.state.service.current(request=request)
