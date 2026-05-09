@@ -28,7 +28,7 @@
 
 ## Docker / Ops Gotchas
 - `docker compose --env-file .env.example config` is the normal lightweight compose verification; after bootstrap changes, also check `KASMVNC_PASSWORD=localtest-password docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
-- Backend binds to `127.0.0.1:${BACKEND_PORT:-8000}:8000`; reverse proxy should expose only the private TRMNL path mapped to `/api/current`.
+- Backend publishes `${BACKEND_PORT:-8000}:8000` on all host interfaces so containerized reverse proxies can reach it; reverse proxy should expose only private TRMNL paths mapped to cached `/api/current` queries.
 - Real MVP still requires runtime proof against the headless Anki service: `version`, `deckNames`, `findCards`, `cardsInfo`, sync, and restart persistence.
 - Keep `.env`, Anki profile data, `.anki2`, media, exported decks, and cached real cards out of git.
 

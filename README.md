@@ -16,6 +16,7 @@ Key rules:
 
 - AnkiConnect is the only data source.
 - AnkiConnect stays internal to Docker and is never public.
+- The backend publishes `${BACKEND_PORT:-8000}:8000` so a containerized reverse proxy can reach it; expose only cached paths publicly.
 - The public endpoint serves cached JSON only.
 - noVNC/KasmVNC is for admin bootstrap only.
 - Default deck/query: `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards.
