@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "ok",
+  "generated_at": "2026-05-09T12:30:00Z",
+  "last_sync_at": "2026-05-09T12:00:00Z",
+  "slot_id": 987654,
+  "cadence_minutes": 30,
+  "stale": false,
+  "card": {
+    "headword": "朝食",
+    "reading": "ちょうしょく",
+    "furigana_html": "<ruby>朝食<rt>ちょうしょく</rt></ruby>",
+    "meaning": "breakfast",
+    "sentence": "朝食を食べてから学校へ行きます。",
+    "sentence_translation": "I go to school after eating breakfast."
+  }
+}

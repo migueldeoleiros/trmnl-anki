@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "ok",
+  "generated_at": "2026-05-09T12:30:00Z",
+  "last_sync_at": "2026-05-09T12:00:00Z",
+  "slot_id": 987654,
+  "cadence_minutes": 15,
+  "stale": false,
+  "card": {
+    "headword": "国際交流基金",
+    "reading": "こくさいこうりゅうききん",
+    "furigana_html": "<ruby>国際交流基金<rt>こくさいこうりゅうききん</rt></ruby>",
+    "meaning": "international cultural exchange foundation; organization supporting language and cultural programs",
+    "sentence": "国際交流基金の日本語講座に申し込んだので、来月から毎週オンラインで授業を受ける予定です。",
+    "sentence_translation": "Because I enrolled in the Japan Foundation's Japanese course, I plan to take online lessons every week starting next month."
+  }
+}

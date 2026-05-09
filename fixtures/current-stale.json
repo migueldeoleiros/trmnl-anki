@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "ok",
+  "generated_at": "2026-05-09T12:30:00Z",
+  "last_sync_at": "2026-05-08T10:00:00Z",
+  "slot_id": 987654,
+  "cadence_minutes": 30,
+  "stale": true,
+  "card": {
+    "headword": "約束",
+    "reading": "やくそく",
+    "furigana_html": "<ruby>約束<rt>やくそく</rt></ruby>",
+    "meaning": "promise; appointment",
+    "sentence": "友だちとの約束を忘れないでください。",
+    "sentence_translation": "Please do not forget your promise to your friend."
+  }
+}
