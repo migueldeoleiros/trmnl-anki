@@ -73,8 +73,40 @@ body {
 
 .jp {
   font-size: clamp(22px, 4.2vw, 40px);
-  line-height: 1.12;
+  line-height: 1.28;
   font-weight: 800;
+}
+
+.jp ruby {
+  ruby-position: over;
+}
+
+.jp rt {
+  font-size: 0.38em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.furigana-word {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: baseline;
+  margin: 0 0.02em;
+}
+
+.furigana-reading {
+  display: block;
+  font-size: 0.38em;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.furigana-base {
+  display: block;
+  line-height: 1;
 }
 
 .en {

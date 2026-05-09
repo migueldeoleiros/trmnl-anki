@@ -31,7 +31,7 @@ SELECTED_FIELD_NAMES = (
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _UNSAFE_BLOCK_RE = re.compile(r"<\s*(script|style)[^>]*>.*?<\s*/\s*\1\s*>", re.IGNORECASE | re.DOTALL)
 _UNSAFE_SINGLE_TAG_RE = re.compile(r"<\s*(img|a|iframe|object|embed|audio|video|source)\b[^>]*>", re.IGNORECASE)
-_ALLOWED_TAG_RE = re.compile(r"</?(ruby|rt|rp|rb|br)\b[^>]*>", re.IGNORECASE)
+_ALLOWED_TAG_RE = re.compile(r"</?(ruby|rt|rp|rb|br|span)\b[^>]*>", re.IGNORECASE)
 _FURIGANA_RE = re.compile(r" ?([^\s\[]+)\[([^\]]+)\]")
 
 
@@ -84,15 +84,33 @@ def furigana_to_html(value: str) -> str:
     if "<ruby" in value.lower() and "<rt" in value.lower():
         return _sanitize_ruby_html(value)
 
-    escaped = html.escape(_plain_text(value))
+    plain = _plain_text(value)
+    escaped = html.escape(plain)
 
     def replace(match: re.Match[str]) -> str:
         base = html.escape(match.group(1))
         reading = html.escape(match.group(2))
         return f"<ruby>{base}<rt>{reading}</rt></ruby>"
 
-    converted = _FURIGANA_RE.sub(replace, escaped)
+    converted = _FURIGANA_RE.sub(replace, plain)
     return converted or escaped
+
+
+def furigana_to_span_html(value: str) -> str:
+    plain = _plain_text(value)
+    if "<ruby" in value.lower() and "<rt" in value.lower():
+        plain = _ruby_html_to_brackets(value)
+    if not _FURIGANA_RE.search(plain):
+        return html.escape(plain)
+
+    parts: list[str] = []
+    last_end = 0
+    for match in _FURIGANA_RE.finditer(plain):
+        parts.append(html.escape(plain[last_end : match.start()]))
+        parts.append(_furigana_span(match.group(1), match.group(2)))
+        last_end = match.end()
+    parts.append(html.escape(plain[last_end:]))
+    return "".join(parts)
 
 
 def reading_text(value: str) -> str:
@@ -141,6 +159,68 @@ def sentence_to_ruby_html(sentence: str, reading: str) -> str:
     return "".join(parts)
 
 
+def sentence_to_furigana_html(sentence: str, reading: str) -> str:
+    sentence_text = _plain_text(sentence)
+    reading_text_value = _plain_text(reading)
+    if not sentence_text:
+        return ""
+    if _FURIGANA_RE.search(reading_text_value):
+        return furigana_to_span_html(reading_text_value)
+    if not reading_text_value:
+        return html.escape(sentence_text)
+
+    parts: list[str] = []
+    read_index = 0
+    index = 0
+    while index < len(sentence_text):
+        char = sentence_text[index]
+        if _is_cjk(char):
+            start = index
+            while index < len(sentence_text) and _is_cjk(sentence_text[index]):
+                index += 1
+            kanji = sentence_text[start:index]
+            next_literal = _next_literal_run(sentence_text, index)
+            if next_literal:
+                next_index = _find_normalized(reading_text_value, next_literal, read_index)
+                if next_index is None:
+                    return html.escape(sentence_text)
+                furigana = reading_text_value[read_index:next_index]
+                read_index = next_index
+            else:
+                furigana = reading_text_value[read_index:]
+                read_index = len(reading_text_value)
+            parts.append(_furigana_span(kanji, furigana) if furigana else html.escape(kanji))
+            continue
+
+        if read_index < len(reading_text_value) and _same_kana_or_literal(char, reading_text_value[read_index]):
+            read_index += 1
+        parts.append(html.escape(char))
+        index += 1
+    return "".join(parts)
+
+
+def _furigana_span(base: str, reading: str) -> str:
+    return (
+        '<span class="furigana-word">'
+        f'<span class="furigana-reading">{html.escape(reading)}</span>'
+        f'<span class="furigana-base">{html.escape(base)}</span>'
+        "</span>"
+    )
+
+
+def _ruby_html_to_brackets(value: str) -> str:
+    value = _UNSAFE_BLOCK_RE.sub("", html.unescape(value))
+    value = _UNSAFE_SINGLE_TAG_RE.sub("", value)
+    pattern = re.compile(r"<ruby\b[^>]*>(.*?)<rt\b[^>]*>(.*?)</rt>\s*</ruby>", re.IGNORECASE | re.DOTALL)
+
+    def replace(match: re.Match[str]) -> str:
+        base = _plain_text(match.group(1))
+        reading = _plain_text(match.group(2))
+        return f"{base}[{reading}]" if base and reading else base
+
+    return pattern.sub(replace, value)
+
+
 def _selected_fields(fields: dict[str, Any]) -> dict[str, str]:
     selected: dict[str, str] = {}
     for name in SELECTED_FIELD_NAMES:
@@ -153,12 +233,12 @@ def _selected_fields(fields: dict[str, Any]) -> dict[str, str]:
 def _sentence_furigana_html(fields: dict[str, Any]) -> str:
     explicit = _field_value(fields, ("Sentence-Furigana",))
     if explicit:
-        return furigana_to_html(explicit)
+        return furigana_to_span_html(explicit)
     reading = _field_value(fields, FIELD_ORDER["sentence_reading"])
     if _FURIGANA_RE.search(_plain_text(reading)):
-        return furigana_to_html(reading)
+        return furigana_to_span_html(reading)
     sentence = _field_value(fields, FIELD_ORDER["sentence"])
-    return sentence_to_ruby_html(sentence, reading)
+    return sentence_to_furigana_html(sentence, reading)
 
 
 def _is_cjk(char: str) -> bool:

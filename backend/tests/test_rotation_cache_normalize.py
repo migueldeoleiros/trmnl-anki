@@ -7,6 +7,15 @@ from app.normalize import furigana_to_html, normalize_card, reading_text, senten
 from app.service import CardService
 
 
+def furigana_span(base: str, reading: str) -> str:
+    return (
+        '<span class="furigana-word">'
+        f'<span class="furigana-reading">{reading}</span>'
+        f'<span class="furigana-base">{base}</span>'
+        "</span>"
+    )
+
+
 def test_random_card_uses_cached_cards_without_slot_rotation(tmp_path, monkeypatch):
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     cache = JsonCardCache(settings.cache_path)
@@ -45,7 +54,7 @@ def test_normalize_card_uses_approved_field_fallbacks_and_ruby():
     assert card["reading"] == "ことば"
     assert card["furigana_html"] == "<ruby>言葉<rt>ことば</rt></ruby>"
     assert card["sentence"] == "いい言葉です"
-    assert card["sentence_furigana_html"] == "いい<ruby>言葉<rt>ことば</rt></ruby>です"
+    assert card["sentence_furigana_html"] == "いい" + furigana_span("言葉", "ことば") + "です"
     assert card["sentence_reading"] == "いいことばです"
     assert card["sentence_translation"] == "It is a good word."
     assert card["fields"] == {
@@ -106,7 +115,7 @@ def test_sentence_furigana_prefers_ruby_field_and_strips_disallowed_html():
 
     card = normalize_card(raw)
 
-    assert card["sentence_furigana_html"] == "<ruby>朝食<rt>ちょうしょく</rt></ruby>"
+    assert card["sentence_furigana_html"] == furigana_span("朝食", "ちょうしょく")
     assert card["sentence_reading"] == "ちょうしょく"
     assert card["fields"]["Sentence-Furigana"] == "朝食ちょうしょく"
     assert "onclick" not in card["sentence_furigana_html"]
@@ -178,9 +187,12 @@ def test_sentence_furigana_uses_anki_bracket_reading_markup():
 
     assert card["sentence_reading"] == "わたしのおとうとはこうこうせいです。"
     assert card["sentence_furigana_html"] == (
-        "<ruby>私<rt>わたし</rt></ruby>の"
-        "<ruby>弟<rt>おとうと</rt></ruby>は"
-        "<ruby>高校生<rt>こうこうせい</rt></ruby>です。"
+        furigana_span("私", "わたし")
+        + "の"
+        + furigana_span("弟", "おとうと")
+        + "は"
+        + furigana_span("高校生", "こうこうせい")
+        + "です。"
     )
 
 
@@ -218,7 +230,7 @@ def test_expression_without_vocabulary_kanji_is_sentence_not_headword():
 
     assert card["headword"] == "ちょうしょく"
     assert card["sentence"] == "朝食を食べます。"
-    assert card["sentence_furigana_html"] == "<ruby>朝食<rt>ちょうしょく</rt></ruby>を<ruby>食<rt>た</rt></ruby>べます。"
+    assert card["sentence_furigana_html"] == furigana_span("朝食", "ちょうしょく") + "を" + furigana_span("食", "た") + "べます。"
     assert card["sentence_reading"] == "ちょうしょくをたべます。"
 
 
