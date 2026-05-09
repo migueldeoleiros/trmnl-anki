@@ -1,0 +1,14 @@
+.env
+*.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.ruff_cache/
+.mypy_cache/
+data/
+cache/
+anki-profile/
+*.apkg
+*.anki2
+collection.media/
