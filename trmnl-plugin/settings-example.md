@@ -8,7 +8,6 @@ Use TRMNL's hosted Private Plugin in Polling mode.
 - Headers: none by default, or a reverse-proxy auth header if your TRMNL plan supports it
 - Body: empty
 - Poll interval: `30 minutes` default; `15 minutes` is supported by this project if TRMNL allows it
-- Markup: paste `trmnl-plugin/template.liquid`
-- CSS: paste `trmnl-plugin/styles.css`
+- Markup: paste `trmnl-plugin/template.html`; it includes the CSS in a `<style>` block for TRMNL's online editor.
 
 Do not point TRMNL at AnkiConnect. TRMNL should only poll the backend cached JSON endpoint.

@@ -42,7 +42,7 @@ Key rules:
 4. Deploy `docker-compose.yml` in Portainer.
 5. For first setup only, add `docker-compose.bootstrap.yml` to expose KasmVNC on localhost/admin-only access, open Anki, sign in to AnkiWeb, and sync the `Core 2000` deck.
 6. Remove the bootstrap override, then reverse proxy only the backend cached endpoint over HTTPS.
-7. Paste `trmnl-plugin/template.liquid` and `trmnl-plugin/styles.css` into a hosted TRMNL Private Plugin using Polling.
+7. Paste `trmnl-plugin/template.html` into a hosted TRMNL Private Plugin using Polling. It includes the CSS inline for TRMNL's online editor.
 
 ## Privacy
 

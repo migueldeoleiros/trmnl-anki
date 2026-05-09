@@ -49,7 +49,7 @@ Prepare the working local backend for a safe public GitHub push, then determine 
 - `backend/app/config.py` - `TRMNL_ANKI_` settings and default env behavior.
 - `backend/app/main.py` - FastAPI app entrypoint and cached endpoint behavior.
 - `fixtures/current-normal.json` - expected `/api/current` shape for TRMNL template compatibility.
-- `trmnl-plugin/template.liquid` - TRMNL consumer of `/api/current` response contract.
+- `trmnl-plugin/template.html` - TRMNL consumer of `/api/current` response contract.
 
 ## Decisions
 - Proceed with an approved execution spec because the user approved the next phase from local backend to GitHub push and later Portainer deployment.

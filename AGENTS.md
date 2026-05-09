@@ -22,7 +22,7 @@
 - AnkiWeb sync has a separate `TRMNL_ANKI_ANKICONNECT_SYNC_TIMEOUT_SECONDS`; if sync fails, backend should still try local card extraction and mark cache stale.
 
 ## TRMNL Plugin Notes
-- `trmnl-plugin/template.liquid` expects the `/api/current` shape shown in `fixtures/current-normal.json`.
+- `trmnl-plugin/template.html` expects the `/api/current` shape shown in `fixtures/current-normal.json`.
 - `card.furigana_html` is intended to render as ruby markup; verify on TRMNL before changing the backend/template contract.
 - Layout is inspired by `trmnl-japanese`, but that repo had no explicit license; do not copy its code/CSS verbatim.
 
