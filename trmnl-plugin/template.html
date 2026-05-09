@@ -89,23 +89,28 @@ body {
 }
 
 .furigana-word {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
+  display: inline-block;
+  position: relative;
+  padding-top: 0.5em;
   vertical-align: baseline;
   margin: 0 0.02em;
 }
 
 .furigana-reading {
   display: block;
-  font-size: 0.38em;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.44em;
   line-height: 1;
   font-weight: 700;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .furigana-base {
-  display: block;
+  display: inline;
   line-height: 1;
 }
 
