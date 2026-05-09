@@ -38,8 +38,8 @@ The frontend should be inspired by the `trmnl-japanese` Japanese word-of-day lay
 - Default Anki sync interval is `3600` seconds and must be configurable.
 - Default TRMNL rotation cadence is `30` minutes and must be configurable; `15` minutes must be possible.
 - Use JSON file cache for v1.
-- Use default Anki query `rated:7 deck:"Core 2000"`.
-- Fall back to `deck:"Core 2000"` if there are not enough cards.
+- Use default Anki query `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards.
+- Fall back to the same state query by default; users may override `TRMNL_ANKI_FALLBACK_QUERY` if they want broader deck coverage.
 - Deck name is `Core 2000`; quote it in Anki query syntax.
 - Field mapping: headword uses `Vocabulary-Kanji -> Expression -> Vocabulary-Kana`.
 - Field mapping: furigana/reading uses `Vocabulary-Furigana -> Reading -> Vocabulary-Kana`.
@@ -124,6 +124,11 @@ AnkiDroid -> AnkiWeb -> hourly configurable sync -> headless Anki Desktop contai
 ## Evidence Log
 - 2026-05-09 SPEC: User approved direction captured in `.opencode/specs/trmnl-anki.md` -> ready for build handoff.
 - 2026-05-09 BUILD: Added FastAPI backend, TRMNL template, Docker packaging, AGENTS.md, and headless Anki/KasmVNC image. Live runtime proof still pending.
+- 2026-05-09 BUILD: Local runtime attempt found NixOS/Netbird Docker networking issues: default Docker bridge containers cannot resolve via host `/etc/resolv.conf` nameserver `100.111.104.55`, while `--network host` and explicit `--dns 1.1.1.1` work. Docker Hub layer downloads from Cloudflare R2 time out on the host, but `mirror.gcr.io` works for Docker Hub images. Removed the bootstrap-only `busybox` password-check service so the overlay fails fast via Compose interpolation and no longer requires an extra image pull. Switched the Anki launcher default to a pinned official GitHub release with SHA256 because `apps.ankiweb.net` times out locally and GitHub succeeds. Base compose config and password-provided bootstrap config render successfully; live container runtime proof remains pending.
+- 2026-05-09 BUILD: Local stack now builds with `docker build --network host` workaround and starts backend/KasmVNC locally. Backend `/health` and `/api/current` respond. KasmVNC is reachable on `127.0.0.1:3000` with bootstrap password and Anki UI window exists. Anki 25.09 launcher interactivity was bypassed by pre-seeding `/config/AnkiProgramFiles` with uv-managed dependencies and launching `aqt.run()` directly; added missing Qt libraries (`libatomic1`, `libxcb-icccm4`, `libxcb-keysyms1`, `libxcb-xkb1`, `libxkbcommon-x11-0`). Anki process stays running, but AnkiConnect `version`, `deckNames`, `findCards`, and `cardsInfo` still return connection refused on `172.28.0.10:8765`; live AnkiConnect proof remains pending.
+- 2026-05-09 BUILD: After manual Anki first-run setup in KasmVNC, AnkiConnect became healthy. Verified from backend container: `version` -> `6`, `deckNames` includes `Core 2000`, default query `rated:7 deck:"Core 2000"` currently returns no cards, fallback query `deck:"Core 2000"` returns cards, and `cardsInfo` returns Core 2000 fields including furigana/reading/sentence fields. Backend `/health` reports `cache_cards: 250`, `last_sync_status: ok`; `/api/current` returns a normalized live card with `furigana_html`. Restarted `anki` and `backend`; AnkiConnect and cache stayed healthy, proving local profile/add-on persistence.
+- 2026-05-09 BUILD: User reported Anki UI error `ModuleNotFoundError: No module named '2055492159.previous'` when loading AnkiConnect. Root cause: `start-anki.sh` preserved old add-on copies as `/config/Anki2/addons21/2055492159.previous`, and Anki attempts to import every directory under `addons21`. Changed add-on replacement to delete stale installs instead of keeping `.previous`, and always remove any lingering `.previous` directory. Rebuilt/restarted; `addons21` now contains only `2055492159`, no recent `ModuleNotFoundError`, AnkiConnect remains healthy.
+- 2026-05-09 BUILD: User clarified desired cards are Core 2000 cards in learning, relearning, young, and mature states. Updated default/fallback query from `rated:7 deck:"Core 2000"` to `deck:"Core 2000" (is:learn or is:review)`, which Anki search maps to learning/relearning via `is:learn` and young/mature review cards via `is:review`.
 
 ## Risks / Blockers
 - Headless Anki is brittle and heavy, but required because AnkiConnect is the only approved data source.

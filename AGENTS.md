@@ -10,7 +10,7 @@
 - AnkiConnect must stay internal-only on Docker networking; default compose binds it to `172.28.0.10:8765`, and public traffic should reach only the FastAPI cached endpoint.
 - Backend must not mutate Anki data or proxy arbitrary AnkiConnect actions.
 - TRMNL polls cached JSON from `GET /api/current`; that route must not trigger live Anki sync or slow AnkiConnect calls.
-- Default deck/query is `rated:7 deck:"Core 2000"`, fallback `deck:"Core 2000"`; keep deck names quoted in Anki search strings.
+- Default deck/query is `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards; keep deck names quoted in Anki search strings.
 
 ## Backend Notes
 - FastAPI entrypoint is `backend.app.main:app`; Dockerfile depends on that import path.
@@ -27,7 +27,7 @@
 - Layout is inspired by `trmnl-japanese`, but that repo had no explicit license; do not copy its code/CSS verbatim.
 
 ## Docker / Ops Gotchas
-- `docker compose --env-file .env.example config` is the normal lightweight compose verification; also check `docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config` after bootstrap changes.
+- `docker compose --env-file .env.example config` is the normal lightweight compose verification; after bootstrap changes, also check `KASMVNC_PASSWORD=localtest-password docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
 - Backend binds to `127.0.0.1:${BACKEND_PORT:-8000}:8000`; reverse proxy should expose only the private TRMNL path mapped to `/api/current`.
 - Real MVP still requires runtime proof against the headless Anki service: `version`, `deckNames`, `findCards`, `cardsInfo`, sync, and restart persistence.
 - Keep `.env`, Anki profile data, `.anki2`, media, exported decks, and cached real cards out of git.

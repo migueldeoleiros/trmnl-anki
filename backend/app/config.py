@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     ankiconnect_sync_timeout_seconds: float = 120.0
     cache_path: Path = Path("/tmp/trmnl-anki-cache.json")
     deck_name: str = "Core 2000"
-    card_query: str = 'rated:7 deck:"Core 2000"'
-    fallback_query: str = 'deck:"Core 2000"'
+    card_query: str = 'deck:"Core 2000" (is:learn or is:review)'
+    fallback_query: str = 'deck:"Core 2000" (is:learn or is:review)'
     min_cards: int = 1
     max_cards: int = 250
     cadence_minutes: int = Field(default=30, ge=1)

@@ -6,10 +6,14 @@ __pycache__/
 .venv/
 .ruff_cache/
 .mypy_cache/
+node_modules/
+.opencode/node_modules/
 data/
 cache/
 anki-profile/
+Anki2/
 *.apkg
 *.anki2
+*.colpkg
 collection.media/
 *.tar.zst

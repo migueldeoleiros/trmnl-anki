@@ -2,12 +2,5 @@ services:
   anki:
     ports:
       - "127.0.0.1:${KASMVNC_PORT:-3000}:3000"
-    depends_on:
-      kasmvnc-password-check:
-        condition: service_completed_successfully
-
-  kasmvnc-password-check:
-    image: busybox:1.36
-    command: ["sh", "-c", "test -n \"$${KASMVNC_PASSWORD}\" || { echo 'KASMVNC_PASSWORD is required for bootstrap' >&2; exit 1; }"]
     environment:
-      KASMVNC_PASSWORD: ${KASMVNC_PASSWORD:-}
+      PASSWORD: ${KASMVNC_PASSWORD:?KASMVNC_PASSWORD is required for bootstrap}

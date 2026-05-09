@@ -18,7 +18,7 @@ Key rules:
 - AnkiConnect stays internal to Docker and is never public.
 - The public endpoint serves cached JSON only.
 - noVNC/KasmVNC is for admin bootstrap only.
-- Default deck/query: `rated:7 deck:"Core 2000"`, fallback `deck:"Core 2000"`.
+- Default deck/query: `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards.
 - Default sync interval: `3600` seconds.
 - Default TRMNL card cadence: `30` minutes; `15` is supported if TRMNL polling allows it.
 
@@ -38,6 +38,7 @@ Key rules:
 1. Copy `.env.example` to `.env` and edit public URL, private path, deck, cadence, and sync settings.
 2. Set `KASMVNC_PASSWORD` before exposing the Anki admin UI.
 3. Run local checks: `python -m compileall -q backend && python -m pytest`, then `docker compose --env-file .env.example config`.
+   For the bootstrap overlay, pass a password while rendering config: `KASMVNC_PASSWORD=change-me docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
 4. Deploy `docker-compose.yml` in Portainer.
 5. For first setup only, add `docker-compose.bootstrap.yml` to expose KasmVNC on localhost/admin-only access, open Anki, sign in to AnkiWeb, and sync the `Core 2000` deck.
 6. Remove the bootstrap override, then reverse proxy only the backend cached endpoint over HTTPS.
@@ -59,7 +60,8 @@ Implemented now:
 - Sanitized fixtures for normal, empty, stale, and long-text states.
 - Docker/Portainer packaging.
 - Docs for setup, operations, privacy, reverse proxy, and noVNC/bootstrap.
+- Local runtime validation against headless Anki Desktop/AnkiConnect, including restart persistence.
 
 Not implemented yet:
 
-- Full runtime validation against a live Anki Desktop/AnkiConnect container.
+- Public reverse proxy/TRMNL hosted polling deployment.

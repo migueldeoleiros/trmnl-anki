@@ -8,7 +8,7 @@ The Anki container also joins an egress network so it can download/install AnkiC
 AnkiDroid
   -> AnkiWeb
   -> headless Anki Desktop in Docker
-  -> AnkiConnect http://anki:8765
+  -> AnkiConnect http://172.28.0.10:8765
   -> FastAPI backend
   -> JSON file cache
   -> HTTPS reverse proxy
