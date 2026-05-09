@@ -35,7 +35,7 @@ Key rules:
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env` and edit public URL, private path, deck, cadence, and sync settings.
+1. Copy `.env.example` to `.env` and edit public URL, private path, deck, cadence, sync settings, and `BACKEND_PORT` if it conflicts with an existing service.
 2. Set `KASMVNC_PASSWORD` before exposing the Anki admin UI.
 3. Run local checks: `python -m compileall -q backend && python -m pytest`, then `docker compose --env-file .env.example config`.
    For the bootstrap overlay, pass a password while rendering config: `KASMVNC_PASSWORD=change-me docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.

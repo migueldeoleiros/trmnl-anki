@@ -13,6 +13,7 @@ Copy `.env.example` to `.env` and fill deployment-specific values. Keep `.env` o
 
 Important defaults:
 
+- `BACKEND_PORT=8010` to avoid common Portainer port `8000` conflicts.
 - `TRMNL_ANKI_SYNC_INTERVAL_SECONDS=3600`
 - `TRMNL_ANKI_CADENCE_MINUTES=30`
 - `TRMNL_ANKI_CARD_QUERY=deck:"Core 2000" (is:learn or is:review)`
