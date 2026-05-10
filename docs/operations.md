@@ -24,7 +24,7 @@ The backend settings are prefixed with `TRMNL_ANKI_`. Automatic refreshes are en
 
 ## Cache
 
-v1 uses a JSON file cache. Keep cache data on a Docker volume and do not commit real cached cards.
+The backend uses a schema v2 per-query JSON cache. Keep cache data on a Docker volume and do not commit real cached cards.
 
 ## Troubleshooting
 

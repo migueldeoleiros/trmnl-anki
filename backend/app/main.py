@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from .ankiconnect import AnkiConnectClient
-from .api_query import resolve_current_query
+from .api_query import resolve_random_query
 from .cache import JsonCardCache
 from .config import Settings, get_settings
 from .service import CardService, scheduler_loop
@@ -55,28 +55,14 @@ async def lifespan(app: FastAPI):
         await service.client.aclose()
 
 
-_settings = get_settings()
 app = FastAPI(
     title="TRMNL Anki",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url="/docs" if _settings.expose_api_docs else None,
-    redoc_url="/redoc" if _settings.expose_api_docs else None,
-    openapi_url="/openapi.json" if _settings.expose_api_docs else None,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
-
-
-@app.get("/health")
-def health() -> dict:
-    service = getattr(app.state, "service", None)
-    if service is None:
-        return {"status": "starting", "cache_cards": 0, "last_sync_status": None}
-    cache = app.state.service.cache.load()
-    return {
-        "status": "ok",
-        "cache_cards": len(cache.get("cards") or []),
-        "last_sync_status": cache.get("last_sync_status"),
-    }
 
 
 @app.get("/api/random")
@@ -86,7 +72,7 @@ def random_card(
     filter: str | None = None,
 ) -> dict:
     settings = app.state.settings
-    request = resolve_current_query(
+    request = resolve_random_query(
         query=query,
         deck=deck,
         filter=filter,
@@ -95,12 +81,3 @@ def random_card(
         max_query_length=settings.max_query_length,
     )
     return app.state.service.random(request=request)
-
-
-@app.get("/api/current")
-def current(
-    query: str | None = None,
-    deck: str | None = None,
-    filter: str | None = None,
-) -> dict:
-    return random_card(query=query, deck=deck, filter=filter)

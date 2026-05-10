@@ -6,7 +6,7 @@ import logging
 import secrets
 
 from .ankiconnect import AnkiConnectClient
-from .api_query import QuerySpec, resolve_current_query
+from .api_query import QuerySpec, resolve_random_query
 from .cache import JsonCardCache, utc_now_iso
 from .config import Settings
 from .normalize import normalize_cards
@@ -22,7 +22,7 @@ class CardService:
         self.cache = cache
         self._refresh_lock = asyncio.Lock()
         self._sync_lock = asyncio.Lock()
-        self.default_spec = resolve_current_query(
+        self.default_spec = resolve_random_query(
             default_query=settings.card_query,
             default_cadence_minutes=settings.cadence_minutes,
             max_query_length=settings.max_query_length,

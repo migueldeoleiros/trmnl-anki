@@ -1,69 +1,71 @@
-# TRMNL Anki Private Plugin
+# TRMNL Anki
 
-Personal TRMNL hosted Private Plugin for showing one cached Anki card at a time on a TRMNL OG display. The intended backend is Python/FastAPI, with Anki Desktop plus AnkiConnect running inside the same Docker/Portainer stack.
+Show a random cached Anki card on a TRMNL display.
 
-This repository contains a small FastAPI backend, Docker/Portainer packaging, a headless Anki/KasmVNC image, sanitized fixtures, docs, and the TRMNL template contract.
-
-## Architecture
+The stack runs Anki Desktop with AnkiConnect in Docker, syncs cards from AnkiWeb, keeps a small JSON cache, and serves one read-only endpoint for TRMNL polling.
 
 ```text
-AnkiDroid -> AnkiWeb -> headless Anki Desktop -> AnkiConnect :8765
-         -> FastAPI backend JSON cache -> HTTPS reverse proxy
-         -> TRMNL hosted Private Plugin Polling -> TRMNL OG
+AnkiDroid -> AnkiWeb -> Anki Desktop -> AnkiConnect -> FastAPI cache -> TRMNL
 ```
 
-Key rules:
+## What It Runs
 
-- AnkiConnect is the only data source.
-- AnkiConnect stays internal to Docker and is never public.
-- The backend publishes `${BACKEND_PORT:-8000}:8000` so a containerized reverse proxy can reach it; expose only cached paths publicly.
-- The public endpoint serves cached JSON only.
-- noVNC/KasmVNC is for admin bootstrap only.
-- Default deck/query: `deck:"Core 2000" (is:learn or is:review)` to include learning, relearning, young, and mature cards.
-- `GET /api/random` also accepts cached-only query variants: `?query=...` or `?deck=Core%202000&filter=is:review`.
-- Default sync interval: `3600` seconds.
-- TRMNL controls poll cadence; each backend call returns a random cached card.
+- FastAPI backend at `GET /api/random`
+- Headless Anki Desktop in KasmVNC for setup and sync
+- AnkiConnect bound only to the internal Docker network
+- JSON cache persisted in a Docker volume
+- TRMNL Liquid template in `trmnl-plugin/template.html`
 
-## Repository Layout
-
-- `backend/` - FastAPI app, AnkiConnect client, JSON cache, rotation, and tests.
-- `trmnl-plugin/` - original Liquid/CSS template and TRMNL settings example.
-- `fixtures/` - sanitized random-card and AnkiConnect example payloads.
-- `docs/` - setup, operations, privacy, reverse proxy, and bootstrap notes.
-- `Dockerfile` - backend container packaging.
-- `anki/` - KasmVNC-based Anki Desktop image that installs AnkiConnect into the persistent profile.
-- `docker-compose.yml` - Portainer-ready stack with backend plus headless Anki service.
-- `.env.example` - documented environment keys without secrets.
+`/api/random` returns cached data only. It does not proxy arbitrary AnkiConnect calls and does not touch live Anki during TRMNL requests.
 
 ## Quick Start
 
-1. Copy `.env.example` to `.env` and edit public URL, private path, default query/deck, cache limits, sync settings, and `BACKEND_PORT` if it conflicts with an existing service.
-2. Set `KASMVNC_PASSWORD` before exposing the Anki admin UI.
-3. Run local checks: `python -m compileall -q backend && python -m pytest`, then `docker compose --env-file .env.example config`.
-   For the bootstrap overlay, pass a password while rendering config: `KASMVNC_PASSWORD=change-me docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.bootstrap.yml config`.
-4. Deploy `docker-compose.yml` in Portainer.
-5. For first setup only, add `docker-compose.bootstrap.yml` to expose KasmVNC on localhost/admin-only access, open Anki, sign in to AnkiWeb, and sync the `Core 2000` deck.
-6. Remove the bootstrap override, then reverse proxy only the backend cached endpoint over HTTPS.
-7. Paste `trmnl-plugin/template.html` into a hosted TRMNL Private Plugin using Polling. It includes the CSS inline for TRMNL's online editor.
+1. Copy `.env.example` to `.env` and edit the values you need.
+2. Set `KASMVNC_PASSWORD` before using the bootstrap overlay.
+3. Check the compose file:
 
-## Privacy
+   ```sh
+   docker compose --env-file .env.example config
+   ```
 
-Card text may be personal study data. Treat the JSON endpoint as private even if it is read-only. Use a long unguessable path, HTTPS, rate limits, low-detail logs, and avoid full payload logging at the proxy.
+4. Start the stack with `docker-compose.yml`.
+5. For first-time setup, temporarily add `docker-compose.bootstrap.yml`, open KasmVNC, sign in to AnkiWeb, and sync the deck.
+6. Remove the bootstrap overlay after Anki is configured.
+7. Reverse proxy a private HTTPS path to `http://backend:8000/api/random` and use that URL in TRMNL Polling mode.
 
-Never commit `.env`, Anki profile data, `.anki2` files, media collections, cached real cards, AnkiWeb credentials, or exported decks.
+Default card query:
 
-## Current Status
+```text
+deck:"Core 2000" (is:learn or is:review)
+```
 
-Implemented now:
+## API
 
-- FastAPI cached random-card endpoint with per-query cache metadata.
-- KasmVNC-based Anki image that downloads Anki launcher and installs AnkiConnect on startup.
-- Original TRMNL full-screen Liquid/CSS template with no QR code and sentence furigana support.
-- Sanitized fixtures for normal, empty, stale, and long-text states.
-- Docker/Portainer packaging.
-- Docs for setup, operations, privacy, reverse proxy, and noVNC/bootstrap.
-- Local runtime validation against headless Anki Desktop/AnkiConnect, including restart persistence.
+```text
+GET /api/random
+GET /api/random?query=deck:%22Core%202000%22%20is:review
+GET /api/random?deck=Core%202000&filter=is:review
+```
 
-Not implemented yet:
+Responses match `fixtures/random-normal.json`. Cold custom queries return `status: not_ready` until the background refresh fills that cache entry.
 
-- Public reverse proxy/TRMNL hosted polling deployment.
+## Configuration
+
+Settings use the `TRMNL_ANKI_` prefix. Common values:
+
+- `TRMNL_ANKI_CARD_QUERY` - default Anki search
+- `TRMNL_ANKI_FALLBACK_QUERY` - fallback search when the default returns too few cards
+- `TRMNL_ANKI_SYNC_INTERVAL_SECONDS` - AnkiWeb sync interval, default `3600`
+- `TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS` - retry delay after failures
+- `TRMNL_ANKI_MAX_CARDS` - maximum cards cached per query
+- `TRMNL_ANKI_MAX_CACHED_QUERIES` - number of cached query variants to keep
+
+See `.env.example` for the full set.
+
+## Repository Layout
+
+- `backend/` - FastAPI app, AnkiConnect client, cache, normalizer, tests
+- `anki/` - KasmVNC Anki image and startup script
+- `trmnl-plugin/` - TRMNL template and settings notes
+- `fixtures/` - sample API responses and AnkiConnect payloads
+- `docs/` - setup, reverse proxy, operations, and privacy notes

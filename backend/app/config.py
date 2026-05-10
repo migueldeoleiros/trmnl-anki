@@ -13,20 +13,17 @@ class Settings(BaseSettings):
     ankiconnect_timeout_seconds: float = 10.0
     ankiconnect_sync_timeout_seconds: float = 120.0
     cache_path: Path = Path("/tmp/trmnl-anki-cache.json")
-    deck_name: str = "Core 2000"
     card_query: str = 'deck:"Core 2000" (is:learn or is:review)'
     fallback_query: str = 'deck:"Core 2000" (is:learn or is:review)'
     min_cards: int = 1
     max_cards: int = 250
     max_query_length: int = Field(default=500, ge=1)
     max_cached_queries: int = Field(default=25, ge=2)
-    refresh_concurrency: int = Field(default=1, ge=1, le=1)
     cadence_minutes: int = Field(default=30, ge=1)
     sync_interval_seconds: int = Field(default=3600, ge=60)
     sync_retry_interval_seconds: int = Field(default=60, ge=5)
     refresh_on_startup: bool = False
     background_sync_enabled: bool = True
-    expose_api_docs: bool = False
 
     @field_validator("cadence_minutes")
     @classmethod

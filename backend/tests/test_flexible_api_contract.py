@@ -7,30 +7,30 @@ from fastapi import HTTPException
 
 
 def test_deck_and_filter_params_compose_quoted_anki_search_with_escaped_deck_name():
-    from app.api_query import resolve_current_query
+    from app.api_query import resolve_random_query
 
-    resolved = resolve_current_query(deck='Core "2k"', filter="is:review", default_query='deck:"Core 2000"')
+    resolved = resolve_random_query(deck='Core "2k"', filter="is:review", default_query='deck:"Core 2000"')
 
     assert resolved.effective_query == 'deck:"Core \\"2k\\"" (is:review)'
     assert resolved.query_label == 'Core "2k"'
 
 
 def test_raw_query_must_not_mix_with_deck_or_filter():
-    from app.api_query import resolve_current_query
+    from app.api_query import resolve_random_query
 
     with pytest.raises(HTTPException) as exc_info:
-        resolve_current_query(query='deck:"Core 2000"', deck="Core 2000", default_query='deck:"Core 2000"')
+        resolve_random_query(query='deck:"Core 2000"', deck="Core 2000", default_query='deck:"Core 2000"')
 
     assert exc_info.value.status_code == 400
 
 
 def test_empty_and_overlong_raw_queries_are_rejected():
-    from app.api_query import resolve_current_query
+    from app.api_query import resolve_random_query
 
     with pytest.raises(HTTPException) as empty_exc:
-        resolve_current_query(query="   ", default_query='deck:"Core 2000"')
+        resolve_random_query(query="   ", default_query='deck:"Core 2000"')
     with pytest.raises(HTTPException) as long_exc:
-        resolve_current_query(query="x" * 501, default_query='deck:"Core 2000"')
+        resolve_random_query(query="x" * 501, default_query='deck:"Core 2000"')
 
     assert empty_exc.value.status_code == 400
     assert long_exc.value.status_code == 400
@@ -46,24 +46,24 @@ def test_query_key_is_stable_and_ignores_cadence():
 
 
 def test_resolve_random_query_uses_server_refresh_cadence():
-    from app.api_query import resolve_current_query
+    from app.api_query import resolve_random_query
 
-    assert resolve_current_query(default_query='deck:"Core 2000"', default_cadence_minutes=30).cadence_minutes == 30
+    assert resolve_random_query(default_query='deck:"Core 2000"', default_cadence_minutes=30).cadence_minutes == 30
 
 
 def test_random_request_path_is_cache_only_for_cold_custom_query(tmp_path):
-    from app.api_query import resolve_current_query
+    from app.api_query import resolve_random_query
     from app.cache import JsonCardCache
     from app.config import Settings
     from app.service import CardService
 
     class ExplodingClient:
-        async def find_cards(self, query):  # pragma: no cover - should never be called by current()
-            raise AssertionError("current() must not call AnkiConnect")
+        async def find_cards(self, query):  # pragma: no cover - should never be called by random()
+            raise AssertionError("random() must not call AnkiConnect")
 
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     service = CardService(settings, client=ExplodingClient(), cache=JsonCardCache(settings.cache_path))  # type: ignore[arg-type]
-    request = resolve_current_query(query='deck:"Core 2000" is:review', default_query=settings.card_query)
+    request = resolve_random_query(query='deck:"Core 2000" is:review', default_query=settings.card_query)
 
     payload = service.random(request=request)
 

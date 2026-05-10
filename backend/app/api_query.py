@@ -28,7 +28,7 @@ def query_key_for(effective_query: str, *, cadence_minutes: int | None = None) -
     return sha256(payload.encode("utf-8")).hexdigest()[:24]
 
 
-def resolve_current_query(
+def resolve_random_query(
     *,
     query: str | None = None,
     deck: str | None = None,

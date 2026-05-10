@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from app.ankiconnect import AnkiConnectClient
+from app.api_query import resolve_random_query
 from app.cache import JsonCardCache
 from app.config import Settings
 from app.normalize import furigana_to_html, normalize_card, reading_text, sentence_to_ruby_html
@@ -16,10 +17,26 @@ def furigana_span(base: str, reading: str) -> str:
     )
 
 
+def default_spec():
+    return resolve_random_query(default_query='deck:"Core 2000" (is:learn or is:review)')
+
+
+def default_entry(data):
+    return next(iter(data["entries"].values()))
+
+
+def update_default_success(cache, cards, *, included, skipped):
+    return cache.update_entry_success(default_spec(), cards, included=included, skipped=skipped)
+
+
+def update_default_failure(cache, error):
+    return cache.update_entry_failure(default_spec(), error)
+
+
 def test_random_card_uses_cached_cards_without_slot_rotation(tmp_path, monkeypatch):
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     cache = JsonCardCache(settings.cache_path)
-    cache.update_success([{"headword": "一"}, {"headword": "二"}], included=2, skipped=0)
+    update_default_success(cache, [{"headword": "一"}, {"headword": "二"}], included=2, skipped=0)
     service = CardService(settings, client=None, cache=cache)  # type: ignore[arg-type]
     monkeypatch.setattr("app.service.secrets.choice", lambda cards: cards[1])
 
@@ -70,18 +87,19 @@ def test_normalize_card_uses_approved_field_fallbacks_and_ruby():
 
 def test_cache_preserves_cards_after_failed_refresh(tmp_path):
     cache = JsonCardCache(tmp_path / "cards.json")
-    cache.update_success([{"headword": "一", "meaning": "one"}], included=1, skipped=0)
-    failed = cache.update_failure("anki offline")
+    update_default_success(cache, [{"headword": "一", "meaning": "one"}], included=1, skipped=0)
+    failed = update_default_failure(cache, "anki offline")
+    entry = default_entry(failed)
 
-    assert failed["cards"] == [{"headword": "一", "meaning": "one"}]
-    assert failed["last_sync_status"] == "error"
+    assert entry["cards"] == [{"headword": "一", "meaning": "one"}]
+    assert entry["last_sync_status"] == "error"
 
 
-def test_current_marks_stale_but_returns_cached_card(tmp_path):
+def test_random_marks_stale_but_returns_cached_card(tmp_path):
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     cache = JsonCardCache(settings.cache_path)
-    cache.update_success([{"headword": "一", "meaning": "one"}], included=1, skipped=0)
-    cache.update_failure("anki offline")
+    update_default_success(cache, [{"headword": "一", "meaning": "one"}], included=1, skipped=0)
+    update_default_failure(cache, "anki offline")
     service = CardService(settings, client=None, cache=cache)  # type: ignore[arg-type]
 
     payload = service.random(datetime(2026, 5, 9, 12, 0, tzinfo=timezone.utc))
@@ -127,33 +145,36 @@ def test_cache_corruption_returns_error_state(tmp_path):
     cache_path.write_text("{not json", encoding="utf-8")
 
     data = JsonCardCache(cache_path).load()
+    entry = default_entry(data)
 
-    assert data["cards"] == []
-    assert data["last_sync_status"] == "error"
-    assert "cache read failed" in data["last_sync_error"]
+    assert entry["cards"] == []
+    assert entry["last_sync_status"] == "error"
+    assert "cache read failed" in entry["last_sync_error"]
     assert not cache_path.exists()
     assert cache_path.with_suffix(".json.corrupt").exists()
 
 
 def test_empty_refresh_preserves_existing_cards(tmp_path):
     cache = JsonCardCache(tmp_path / "cards.json")
-    cache.update_success([{"headword": "一", "meaning": "one"}], included=1, skipped=0)
+    update_default_success(cache, [{"headword": "一", "meaning": "one"}], included=1, skipped=0)
 
-    data = cache.update_success([], included=0, skipped=4)
+    data = update_default_success(cache, [], included=0, skipped=4)
+    entry = default_entry(data)
 
-    assert data["cards"] == [{"headword": "一", "meaning": "one"}]
-    assert data["last_sync_status"] == "error"
-    assert "no usable cards" in data["last_sync_error"]
+    assert entry["cards"] == [{"headword": "一", "meaning": "one"}]
+    assert entry["last_sync_status"] == "error"
+    assert "no usable cards" in entry["last_sync_error"]
 
 
 def test_first_empty_refresh_is_error_for_retry_loop(tmp_path):
     cache = JsonCardCache(tmp_path / "cards.json")
 
-    data = cache.update_success([], included=0, skipped=4)
+    data = update_default_success(cache, [], included=0, skipped=4)
+    entry = default_entry(data)
 
-    assert data["cards"] == []
-    assert data["last_sync_status"] == "error"
-    assert "no usable cards" in data["last_sync_error"]
+    assert entry["cards"] == []
+    assert entry["last_sync_status"] == "error"
+    assert "no usable cards" in entry["last_sync_error"]
 
 
 def test_reading_text_extracts_bracket_reading():
@@ -284,8 +305,8 @@ def test_cache_save_uses_unique_temp_names(tmp_path, monkeypatch):
     monkeypatch.setattr("app.cache.os.replace", capture_replace)
     cache = JsonCardCache(tmp_path / "cards.json")
 
-    cache.update_success([{"headword": "一", "meaning": "one"}], included=1, skipped=0)
-    cache.update_failure("anki offline")
+    update_default_success(cache, [{"headword": "一", "meaning": "one"}], included=1, skipped=0)
+    update_default_failure(cache, "anki offline")
 
     assert len(names) == 2
     assert names[0] != names[1]
@@ -293,16 +314,17 @@ def test_cache_save_uses_unique_temp_names(tmp_path, monkeypatch):
 
 def test_mark_stale_preserves_successful_local_extraction(tmp_path):
     cache = JsonCardCache(tmp_path / "cards.json")
-    cache.update_success([{"headword": "一", "meaning": "one"}], included=1, skipped=0)
+    update_default_success(cache, [{"headword": "一", "meaning": "one"}], included=1, skipped=0)
 
-    data = cache.mark_stale("sync failed before successful local extraction")
+    data = cache.mark_entry_stale(default_spec(), "sync failed before successful local extraction")
+    entry = default_entry(data)
 
-    assert data["cards"] == [{"headword": "一", "meaning": "one"}]
-    assert data["last_sync_status"] == "error"
-    assert "sync failed" in data["last_sync_error"]
+    assert entry["cards"] == [{"headword": "一", "meaning": "one"}]
+    assert entry["last_sync_status"] == "error"
+    assert "sync failed" in entry["last_sync_error"]
 
 
-def test_current_empty_cache_uses_empty_status(tmp_path):
+def test_random_empty_cache_uses_empty_status(tmp_path):
     settings = Settings(cache_path=tmp_path / "cards.json", cadence_minutes=30)
     service = CardService(settings, client=None, cache=JsonCardCache(settings.cache_path))  # type: ignore[arg-type]
 

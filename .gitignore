@@ -7,7 +7,7 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 node_modules/
-.opencode/node_modules/
+.opencode/
 data/
 cache/
 anki-profile/

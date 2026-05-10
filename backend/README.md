@@ -2,9 +2,8 @@
 
 The backend implementation lives under `backend/app`. This package wires deployment and documents the public contract used by TRMNL.
 
-Expected runtime contract:
+Runtime contract:
 
-- `GET /health` returns service health.
 - `GET /api/random` returns compact cached JSON shaped like `fixtures/random-normal.json`.
 - `GET /api/random?query=...` uses a raw Anki search; `GET /api/random?deck=...&filter=...` composes `deck:"..." (<filter>)`.
 - cold custom queries return `status: not_ready` while the background worker fills that cache entry.

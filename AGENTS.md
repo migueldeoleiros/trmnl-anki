@@ -16,7 +16,7 @@
 - FastAPI entrypoint is `backend.app.main:app`; Dockerfile depends on that import path.
 - Settings use `pydantic-settings` with `TRMNL_ANKI_` env prefix from `backend/app/config.py`.
 - `pyproject.toml` sets `pythonpath = backend`; run tests from repo root with `python -m pytest` after installing `backend/requirements-dev.txt` or `backend/requirements-dev.lock`.
-- FastAPI docs are disabled by default via `TRMNL_ANKI_EXPOSE_API_DOCS=false`; do not re-enable in default compose.
+- FastAPI docs are disabled in the app; do not expose generated docs in default compose.
 - JSON cache is v2 per-query persistence; preserve last-good cards on Anki failures or empty normalization results.
 - Background sync retries with `TRMNL_ANKI_SYNC_RETRY_INTERVAL_SECONDS` after failures so startup races with AnkiConnect do not stay empty for an hour.
 - AnkiWeb sync has a separate `TRMNL_ANKI_ANKICONNECT_SYNC_TIMEOUT_SECONDS`; if sync fails, backend should still try local card extraction and mark cache stale.

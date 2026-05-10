@@ -34,16 +34,17 @@ class JsonCardCache:
                 data = json.load(handle)
         except (OSError, json.JSONDecodeError) as exc:
             data = self.empty()
-            data.update(
-                {
-                    "last_sync_status": "error",
-                    "last_sync_error": f"cache read failed: {exc}",
-                }
-            )
+            timestamp = utc_now_iso()
+            spec = self._default_spec()
+            data["entries"][spec.query_key] = {
+                **self._empty_entry(spec, timestamp),
+                "last_sync_status": "error",
+                "last_sync_error": f"cache read failed: {exc}",
+            }
             self._quarantine_corrupt_cache()
             return data
         if self._is_v2(data):
-            return self._with_legacy_view({**self.empty(), **data})
+            return {**self.empty(), **data}
         return self._migrate_v1(data)
 
     def _quarantine_corrupt_cache(self) -> None:
@@ -58,7 +59,6 @@ class JsonCardCache:
     def save(self, data: dict[str, Any]) -> None:
         if not self._is_v2(data):
             data = self._migrate_v1(data, save=False)
-        data = self._without_legacy_view(data)
         self._evict_entries(data, protected_key=data.pop("_protected_query_key", None))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
@@ -199,61 +199,11 @@ class JsonCardCache:
                 due.append({**self._entry_defaults(), **entry})
         return sorted(due, key=lambda item: item.get("next_due_at") or "")
 
-    def update_success(self, cards: list[dict[str, Any]], *, included: int, skipped: int) -> dict[str, Any]:
-        spec = self._default_spec()
-        return self.update_entry_success(spec, cards, included=included, skipped=skipped)
-
-    def _legacy_update_success(self, cards: list[dict[str, Any]], *, included: int, skipped: int) -> dict[str, Any]:
-        now = utc_now_iso()
-        data = self.load()
-        if included == 0:
-            data.update(
-                {
-                    "schema_version": SCHEMA_VERSION,
-                    "last_sync_at": now,
-                    "last_sync_status": "error",
-                    "last_sync_error": "refresh produced no usable cards",
-                    "included_count": 0,
-                    "skipped_count": skipped,
-                }
-            )
-            self.save(data)
-            return data
-        data.update(
-            {
-                "schema_version": SCHEMA_VERSION,
-                "cards": cards,
-                "updated_at": now,
-                "last_sync_at": now,
-                "last_success_at": now,
-                "last_sync_status": "ok",
-                "last_sync_error": None,
-                "included_count": included,
-                "skipped_count": skipped,
-            }
-        )
-        self.save(data)
-        return data
-
-    def update_failure(self, error: str) -> dict[str, Any]:
-        return self.update_entry_failure(self._default_spec(), error)
-
-    def mark_stale(self, error: str) -> dict[str, Any]:
-        return self.mark_entry_stale(self._default_spec(), error)
-
     @staticmethod
     def empty() -> dict[str, Any]:
         return {
             "schema_version": SCHEMA_VERSION,
             "entries": {},
-            "cards": [],
-            "updated_at": None,
-            "last_sync_at": None,
-            "last_success_at": None,
-            "last_sync_status": "never",
-            "last_sync_error": None,
-            "included_count": 0,
-            "skipped_count": 0,
         }
 
     @staticmethod
@@ -328,26 +278,7 @@ class JsonCardCache:
         }
         if save and data.get("schema_version") == LEGACY_SCHEMA_VERSION:
             self.save(migrated)
-        return self._with_legacy_view(migrated)
-
-    def _with_legacy_view(self, data: dict[str, Any]) -> dict[str, Any]:
-        entry = self.entry_for(self.default_query_key, data=data) or self._entry_defaults()
-        data.update(
-            {
-                "cards": entry.get("cards") or [],
-                "updated_at": entry.get("updated_at"),
-                "last_sync_at": entry.get("last_sync_at"),
-                "last_success_at": entry.get("last_success_at"),
-                "last_sync_status": entry.get("last_sync_status"),
-                "last_sync_error": entry.get("last_sync_error"),
-                "included_count": entry.get("included_count", 0),
-                "skipped_count": entry.get("skipped_count", 0),
-            }
-        )
-        return data
-
-    def _without_legacy_view(self, data: dict[str, Any]) -> dict[str, Any]:
-        return {"schema_version": SCHEMA_VERSION, "entries": data.get("entries") or {}}
+        return migrated
 
     def _evict_entries(self, data: dict[str, Any], *, protected_key: str | None = None) -> None:
         entries = data.get("entries") or {}

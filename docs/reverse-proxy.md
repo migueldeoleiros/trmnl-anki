@@ -15,7 +15,7 @@ Operational recommendations:
 - Use a long random token in the path.
 - Add basic rate limiting.
 - Log request metadata, not response bodies.
-- Do not route `/debug`, `/docs`, AnkiConnect `:8765`, or noVNC/KasmVNC publicly.
+- Do not route AnkiConnect `:8765` or noVNC/KasmVNC publicly.
 - If possible, restrict admin bootstrap routes to VPN or local network.
 
 Nginx/Caddy/Traefik configs are intentionally not fixed here because Portainer host environments vary.
